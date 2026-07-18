@@ -25,6 +25,7 @@ dist/
 # Markdowns
 *.md
 !README.md
+some.txt
 
 # Logs
 *.log
