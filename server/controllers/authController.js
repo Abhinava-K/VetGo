@@ -1,0 +1,185 @@
+const jwt = require('jsonwebtoken');
+const User = require('../models/User');
+const DoctorProfile = require('../models/DoctorProfile');
+const { encryptField, decryptField } = require('../middleware/encryption');
+
+const generateToken = (id, role) => {
+  return jwt.sign({ id, role }, process.env.JWT_SECRET, {
+    expiresIn: '15m'
+  });
+};
+
+const generateRefreshToken = (id) => {
+  return jwt.sign({ id }, process.env.REFRESH_TOKEN_SECRET, {
+    expiresIn: '7d'
+  });
+};
+
+// @desc    Register a user
+// @route   POST /api/auth/signup/user
+exports.signupUser = async (req, res) => {
+  try {
+    const { firstName, lastName, email, password, phone } = req.body;
+
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+      return res.status(400).json({ message: 'User already exists' });
+    }
+
+    const phoneEncrypted = encryptField(phone);
+
+    const user = await User.create({
+      name: { first: firstName, last: lastName },
+      email,
+      passwordHash: password, // Pre-save hook hashes this
+      phoneEncrypted,
+      role: 'USER'
+    });
+
+    if (user) {
+      const accessToken = generateToken(user._id, user.role);
+      const refreshToken = generateRefreshToken(user._id);
+
+      res.cookie('refreshToken', refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+      });
+
+      res.status(201).json({
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        accessToken
+      });
+    }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Apply as a doctor
+// @route   POST /api/auth/signup/doctor
+exports.signupDoctor = async (req, res) => {
+  try {
+    const { firstName, lastName, email, password, phone, qualifications } = req.body;
+
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+      return res.status(400).json({ message: 'User already exists' });
+    }
+
+    const phoneEncrypted = encryptField(phone);
+
+    // Create user with role USER initially (Admin approves to change to DOCTOR)
+    const user = await User.create({
+      name: { first: firstName, last: lastName },
+      email,
+      passwordHash: password,
+      phoneEncrypted,
+      role: 'USER'
+    });
+
+    // Create Doctor Profile (Pending)
+    const doctorProfile = await DoctorProfile.create({
+      userId: user._id,
+      qualifications,
+      docs: req.files ? req.files.map(file => ({
+        filename: file.filename,
+        filepath: file.path,
+        status: 'PENDING'
+      })) : []
+    });
+
+    res.status(201).json({
+      message: 'Application submitted. An admin will review your profile.',
+      userId: user._id
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Login user
+// @route   POST /api/auth/login
+exports.login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    const user = await User.findOne({ email });
+    if (user && (await user.comparePassword(password))) {
+      const accessToken = generateToken(user._id, user.role);
+      const refreshToken = generateRefreshToken(user._id);
+
+      res.cookie('refreshToken', refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000
+      });
+
+      res.json({
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        accessToken,
+        refreshToken
+      });
+    } else {
+      res.status(401).json({ message: 'Invalid email or password' });
+    }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Refresh token
+// @route   POST /api/auth/refresh
+exports.refreshToken = async (req, res) => {
+  const refreshToken = req.cookies.refreshToken || req.body.refreshToken;
+  if (!refreshToken) return res.status(401).json({ message: 'No refresh token' });
+
+  try {
+    const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+    const user = await User.findById(decoded.id);
+    if (!user) return res.status(401).json({ message: 'User not found' });
+
+    const accessToken = generateToken(user._id, user.role);
+    res.json({ accessToken });
+  } catch (error) {
+    res.status(401).json({ message: 'Invalid refresh token' });
+  }
+};
+
+// @desc    Logout user
+// @route   POST /api/auth/logout
+exports.logout = (req, res) => {
+  res.clearCookie('refreshToken');
+  res.status(200).json({ message: 'Logged out' });
+};
+
+// @desc    Get current user profile details
+// @route   GET /api/auth/me
+exports.getMe = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('-passwordHash');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const phone = user.phoneEncrypted ? decryptField(user.phoneEncrypted) : '';
+
+    res.json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      phone,
+      role: user.role,
+      location: user.location,
+      createdAt: user.createdAt
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
