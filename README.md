@@ -82,5 +82,3 @@ Full API documentation is provided in the `server/vetgo_api.postman_collection.j
 - **Validation**: Strict Joi schema validation on all inputs.
 
 ---
-
-*Built with ❤️ for animals by Antigravity AI.*
