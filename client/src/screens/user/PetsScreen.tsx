@@ -1,5 +1,5 @@
 import React, { useContext, useState, useCallback } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, FlatList, ActivityIndicator, Alert } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -30,6 +30,33 @@ export default function PetsScreen() {
     }
   };
 
+  const handleEditPet = (pet: any) => {
+    navigation.navigate('AddPet', { pet });
+  };
+
+  const handleDeletePet = (pet: any) => {
+    Alert.alert(
+      'Delete Pet',
+      `Are you sure you want to delete ${pet.name}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await api.delete(`/pets/${pet._id}`);
+              Alert.alert('Success', `${pet.name} has been removed.`);
+              fetchPets();
+            } catch (error: any) {
+              Alert.alert('Error', error.response?.data?.message || 'Failed to delete pet');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const renderPet = ({ item }: { item: any }) => (
     <View style={[styles.petCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
       <View style={[styles.avatarPlaceholder, { backgroundColor: theme.background }]}>
@@ -38,8 +65,16 @@ export default function PetsScreen() {
       <View style={styles.petInfo}>
         <Text style={[styles.petName, { color: theme.text }]}>{item.name}</Text>
         <Text style={[styles.petDetails, { color: theme.textSecondary }]}>
-          {item.species} {item.breed ? `• ${item.breed}` : ''} {item.age ? `• ${item.age} yrs` : ''}
+          {item.species} {item.breed ? `• ${item.breed}` : ''} {item.age !== undefined && item.age !== null ? `• ${item.age} yrs` : ''}
         </Text>
+      </View>
+      <View style={styles.actions}>
+        <TouchableOpacity style={styles.actionBtn} onPress={() => handleEditPet(item)}>
+          <Ionicons name="create-outline" size={22} color={theme.primary} />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.actionBtn} onPress={() => handleDeletePet(item)}>
+          <Ionicons name="trash-outline" size={22} color="#E53935" />
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -139,5 +174,13 @@ const styles = StyleSheet.create({
   },
   petDetails: {
     fontSize: 14,
+  },
+  actions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  actionBtn: {
+    padding: 6,
+    marginLeft: 6,
   }
 });

@@ -8,7 +8,7 @@ import {
   Platform,
   Alert 
 } from 'react-native';
-import MapView, { Marker, Polyline } from 'react-native-maps';
+import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { ThemeContext } from '../../context/ThemeContext';
@@ -92,6 +92,7 @@ export default function AssignedRequestScreen() {
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <MapView
         style={styles.map}
+        provider={PROVIDER_GOOGLE}
         initialRegion={{
           latitude: request.location.coordinates[1],
           longitude: request.location.coordinates[0],

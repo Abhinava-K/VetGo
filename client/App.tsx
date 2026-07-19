@@ -1,7 +1,11 @@
 import 'react-native-gesture-handler';
 import React from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, LogBox } from 'react-native';
+
+LogBox.ignoreLogs([
+  'InteractionManager has been deprecated',
+]);
 import { NavigationContainer } from '@react-navigation/native';
 import RootNavigator from './src/navigation';
 import { AuthProvider } from './src/context/AuthContext';

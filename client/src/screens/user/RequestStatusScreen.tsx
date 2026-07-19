@@ -10,7 +10,7 @@ import {
   TextInput,
   Alert 
 } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { ThemeContext } from '../../context/ThemeContext';
 import { getSocket } from '../../services/socket';
@@ -88,6 +88,7 @@ export default function RequestStatusScreen() {
     <View style={styles.container}>
       <MapView
         style={styles.map}
+        provider={PROVIDER_GOOGLE}
         initialRegion={{
           latitude: request.location.coordinates[1],
           longitude: request.location.coordinates[0],

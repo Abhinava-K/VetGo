@@ -1,6 +1,6 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { StyleSheet, View, Text, TextInput, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemeContext } from '../../context/ThemeContext';
 import api from '../../services/api';
@@ -8,15 +8,28 @@ import api from '../../services/api';
 export default function AddPetScreen() {
   const { theme } = useContext(ThemeContext);
   const navigation = useNavigation();
+  const route = useRoute<any>();
   const insets = useSafeAreaInsets();
 
-  const [name, setName] = useState('');
-  const [species, setSpecies] = useState('');
-  const [breed, setBreed] = useState('');
-  const [age, setAge] = useState('');
+  const petToEdit = route.params?.pet;
+  const isEditing = !!petToEdit;
+
+  const [name, setName] = useState(petToEdit?.name || '');
+  const [species, setSpecies] = useState(petToEdit?.species || '');
+  const [breed, setBreed] = useState(petToEdit?.breed || '');
+  const [age, setAge] = useState(petToEdit?.age !== undefined && petToEdit?.age !== null ? String(petToEdit.age) : '');
   const [loading, setLoading] = useState(false);
 
-  const handleAddPet = async () => {
+  useEffect(() => {
+    if (petToEdit) {
+      setName(petToEdit.name || '');
+      setSpecies(petToEdit.species || '');
+      setBreed(petToEdit.breed || '');
+      setAge(petToEdit.age !== undefined && petToEdit.age !== null ? String(petToEdit.age) : '');
+    }
+  }, [petToEdit]);
+
+  const handleSavePet = async () => {
     if (!name || !species) {
       Alert.alert('Error', 'Name and species are required.');
       return;
@@ -24,16 +37,26 @@ export default function AddPetScreen() {
 
     setLoading(true);
     try {
-      await api.post('/pets', {
-        name,
-        species,
-        breed,
-        age: parseInt(age) || 0,
-      });
-      Alert.alert('Success', 'Pet added successfully!');
+      if (isEditing) {
+        await api.put(`/pets/${petToEdit._id}`, {
+          name,
+          species,
+          breed,
+          age: parseInt(age) || 0,
+        });
+        Alert.alert('Success', 'Pet updated successfully!');
+      } else {
+        await api.post('/pets', {
+          name,
+          species,
+          breed,
+          age: parseInt(age) || 0,
+        });
+        Alert.alert('Success', 'Pet added successfully!');
+      }
       navigation.goBack();
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.message || 'Failed to add pet');
+      Alert.alert('Error', error.response?.data?.message || (isEditing ? 'Failed to update pet' : 'Failed to add pet'));
     } finally {
       setLoading(false);
     }
@@ -51,7 +74,9 @@ export default function AddPetScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Text style={[styles.backText, { color: theme.primary }]}>← Back</Text>
         </TouchableOpacity>
-        <Text style={[styles.title, { color: theme.text }]}>Add a New Pet</Text>
+        <Text style={[styles.title, { color: theme.text }]}>
+          {isEditing ? 'Edit Pet Details' : 'Add a New Pet'}
+        </Text>
         <View style={{ width: 60 }} />
       </View>
       
@@ -88,13 +113,13 @@ export default function AddPetScreen() {
 
         <TouchableOpacity 
           style={[styles.submitBtn, { backgroundColor: theme.primary }]}
-          onPress={handleAddPet}
+          onPress={handleSavePet}
           disabled={loading}
         >
           {loading ? (
             <ActivityIndicator color="#FFF" />
           ) : (
-            <Text style={styles.submitBtnText}>Save Pet</Text>
+            <Text style={styles.submitBtnText}>{isEditing ? 'Update Pet' : 'Save Pet'}</Text>
           )}
         </TouchableOpacity>
       </View>

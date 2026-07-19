@@ -4,7 +4,6 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemeContext } from '../../context/ThemeContext';
 import api from '../../services/api';
-import FloatingAddPetBtn from '../../components/FloatingAddPetBtn';
 
 export default function RequestsScreen() {
   const { theme } = useContext(ThemeContext);
@@ -95,9 +94,6 @@ export default function RequestsScreen() {
           contentContainerStyle={{ paddingBottom: 100 }}
         />
       )}
-
-      {/* Floating Add Pet button always visible */}
-      <FloatingAddPetBtn />
     </View>
   );
 }
