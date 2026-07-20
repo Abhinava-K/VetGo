@@ -8,7 +8,8 @@ const {
   login, 
   refreshToken, 
   logout,
-  getMe
+  getMe,
+  resetPasswordWithPhone
 } = require('../controllers/authController');
 const { 
   validate, 
@@ -45,6 +46,7 @@ const upload = multer({
 router.post('/signup/user', validate(signupUserSchema), signupUser);
 router.post('/signup/doctor', upload.array('docs', 3), validate(signupDoctorSchema), signupDoctor);
 router.post('/login', validate(loginSchema), login);
+router.post('/forgot-password', resetPasswordWithPhone);
 router.post('/refresh', refreshToken);
 router.post('/logout', logout);
 router.get('/me', protect, getMe);

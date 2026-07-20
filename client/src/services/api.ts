@@ -33,18 +33,36 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    const isAuthRoute = originalRequest?.url?.includes('/auth/login') ||
+                        originalRequest?.url?.includes('/auth/signup') ||
+                        originalRequest?.url?.includes('/auth/refresh');
+
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthRoute) {
       originalRequest._retry = true;
       try {
         const refreshToken = await AsyncStorage.getItem('refreshToken');
-        const { data } = await axios.post(`${API_URL}/auth/refresh`, { refreshToken }, { withCredentials: true });
-        await AsyncStorage.setItem('accessToken', data.accessToken);
-        api.defaults.headers.common['Authorization'] = `Bearer ${data.accessToken}`;
-        return api(originalRequest);
+        if (!refreshToken) {
+          return Promise.reject(error);
+        }
+
+        const { data } = await axios.post(
+          `${API_URL}/auth/refresh`,
+          { refreshToken },
+          { withCredentials: true }
+        );
+
+        if (data.accessToken) {
+          await AsyncStorage.setItem('accessToken', data.accessToken);
+          api.defaults.headers.common['Authorization'] = `Bearer ${data.accessToken}`;
+          if (originalRequest.headers) {
+            originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
+          }
+          return api(originalRequest);
+        }
       } catch (err) {
         await AsyncStorage.removeItem('accessToken');
         await AsyncStorage.removeItem('refreshToken');
-        return Promise.reject(err);
+        return Promise.reject(error);
       }
     }
     return Promise.reject(error);

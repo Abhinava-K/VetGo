@@ -1,4 +1,3 @@
-const Request = require('../models/User'); // Wait, Request model is in Request.js
 const RequestModel = require('../models/Request');
 const User = require('../models/User');
 const DoctorProfile = require('../models/DoctorProfile');

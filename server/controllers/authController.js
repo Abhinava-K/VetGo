@@ -107,9 +107,20 @@ exports.signupDoctor = async (req, res) => {
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
+    const cleanEmail = email ? email.toLowerCase().trim() : '';
 
-    const user = await User.findOne({ email });
-    if (user && (await user.comparePassword(password))) {
+    console.log(`[AUTH] Login attempt for email: "${cleanEmail}"`);
+
+    const user = await User.findOne({ email: cleanEmail });
+    if (!user) {
+      console.log(`[AUTH] User not found for email: "${cleanEmail}"`);
+      return res.status(401).json({ message: 'Invalid email or password' });
+    }
+
+    const isMatch = await user.comparePassword(password);
+    console.log(`[AUTH] Password match result for ${cleanEmail}: ${isMatch}, User role: ${user.role}`);
+
+    if (isMatch) {
       const accessToken = generateToken(user._id, user.role);
       const refreshToken = generateRefreshToken(user._id);
 
@@ -132,6 +143,7 @@ exports.login = async (req, res) => {
       res.status(401).json({ message: 'Invalid email or password' });
     }
   } catch (error) {
+    console.error('[AUTH] Login error:', error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -180,6 +192,45 @@ exports.getMe = async (req, res) => {
       createdAt: user.createdAt
     });
   } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Reset password using phone number verification
+// @route   POST /api/auth/forgot-password
+exports.resetPasswordWithPhone = async (req, res) => {
+  try {
+    const { email, phone, newPassword } = req.body;
+
+    if (!email || !phone || !newPassword) {
+      return res.status(400).json({ message: 'Email, phone number, and new password are required' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: 'New password must be at least 6 characters' });
+    }
+
+    const cleanEmail = email.toLowerCase().trim();
+    const cleanPhone = phone.trim();
+
+    const user = await User.findOne({ email: cleanEmail });
+    if (!user) {
+      return res.status(404).json({ message: 'No account found with this email' });
+    }
+
+    const storedPhone = user.phoneEncrypted ? decryptField(user.phoneEncrypted) : null;
+    const cleanStoredPhone = storedPhone ? storedPhone.trim() : '';
+
+    if (cleanStoredPhone !== cleanPhone) {
+      return res.status(400).json({ message: 'Phone number does not match our records' });
+    }
+
+    user.passwordHash = newPassword; // Pre-save hook hashes with bcrypt
+    await user.save();
+
+    res.json({ message: 'Password reset successfully! You can now log in.' });
+  } catch (error) {
+    console.error('[AUTH] Forgot password error:', error);
     res.status(500).json({ message: error.message });
   }
 };

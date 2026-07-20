@@ -1,15 +1,61 @@
 const User = require('../models/User');
 const DoctorProfile = require('../models/DoctorProfile');
+const Request = require('../models/Request');
 
-// @desc    Get all pending doctor applications
+// @desc    Get dashboard metrics & stats
+// @route   GET /api/admin/stats
+exports.getAdminStats = async (req, res) => {
+  try {
+    const totalUsers = await User.countDocuments({ role: 'USER' });
+    const totalDoctors = await User.countDocuments({ role: 'DOCTOR' });
+    
+    // Count pending doctor profiles
+    const allProfiles = await DoctorProfile.find();
+    const pendingDoctors = allProfiles.filter(p => 
+      p.docs && p.docs.some(d => d.status === 'PENDING')
+    ).length;
+
+    const totalRequests = await Request.countDocuments();
+    const openRequests = await Request.countDocuments({ status: 'OPEN' });
+    const completedRequests = await Request.countDocuments({ status: 'COMPLETED' });
+
+    res.json({
+      totalUsers,
+      totalDoctors,
+      pendingDoctors,
+      totalRequests,
+      openRequests,
+      completedRequests
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Get all doctor applications (pending, approved, rejected)
 // @route   GET /api/admin/doctor-applications
 exports.getPendingDoctors = async (req, res) => {
   try {
-    const pendingDocs = await DoctorProfile.find({
-      'docs.status': 'PENDING'
-    }).populate('userId', 'name email');
-    
-    res.json(pendingDocs);
+    const doctorProfiles = await DoctorProfile.find()
+      .populate('userId', 'name email createdAt role')
+      .sort({ createdAt: -1 });
+
+    res.json(doctorProfiles);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Get all emergency requests globally
+// @route   GET /api/admin/requests
+exports.getAllRequests = async (req, res) => {
+  try {
+    const requests = await Request.find()
+      .populate('userId', 'name email')
+      .populate('acceptedBy', 'name email')
+      .sort({ createdAt: -1 });
+
+    res.json(requests);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
