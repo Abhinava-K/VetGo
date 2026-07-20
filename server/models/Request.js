@@ -39,6 +39,11 @@ const requestSchema = new mongoose.Schema({
     ref: 'User', // Refers to the doctor (who is a User with role DOCTOR)
     default: null
   },
+  mockDoctor: {
+    name: String,
+    qualification: String,
+    phone: String
+  },
   acceptedAt: Date,
   startedAt: Date,
   completedAt: Date,

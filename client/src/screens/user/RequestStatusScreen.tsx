@@ -120,12 +120,17 @@ export default function RequestStatusScreen() {
         ) : (
           <View>
             <Text style={[styles.docName, { color: theme.text }]}>
-              {request.doctor?.doctorName || 'Doctor assigned'}
+              {request.doctor?.doctorName || request.mockDoctor?.name || 'Doctor assigned'}
             </Text>
-            <Text style={{ color: theme.textSecondary }}>{request.doctor?.qualification}</Text>
+            <Text style={{ color: theme.textSecondary }}>
+              {request.doctor?.qualification || request.mockDoctor?.qualification || 'Veterinary Specialist'}
+            </Text>
             <TouchableOpacity 
               style={[styles.callBtn, { backgroundColor: theme.primary }]}
-              onPress={() => Linking.openURL(`tel:${request.doctor?.phone}`)}
+              onPress={() => {
+                const phone = request.doctor?.phone || request.mockDoctor?.phone;
+                if (phone) Linking.openURL(`tel:${phone}`);
+              }}
             >
               <Text style={styles.callBtnText}>Call Doctor</Text>
             </TouchableOpacity>

@@ -8,32 +8,52 @@ const { decryptField } = require('../middleware/encryption');
 // @route   POST /api/requests
 exports.createRequest = async (req, res) => {
   try {
-    const { description, location, petId } = req.body;
+    const { description, location, petId, doctorId } = req.body;
     
-    const request = await RequestModel.create({
+    const isMockDoctor = typeof doctorId === 'string' && doctorId.startsWith('doc-');
+
+    const mockDoctorMap = {
+      'doc-1': { name: 'Dr. Sarah Jenkins', qualification: 'BVSc & AH - Small Animal Specialist', phone: '+18005550199' },
+      'doc-2': { name: 'Dr. Rajesh Sharma', qualification: 'MVSc Veterinary Surgery', phone: '+18005550288' },
+      'doc-3': { name: 'Dr. Emily Wong', qualification: 'DVM - Avian & Exotic Pet Expert', phone: '+18005550377' },
+      'doc-4': { name: 'Dr. Amit Patel', qualification: 'Senior Veterinary Clinician', phone: '+18005550466' },
+    };
+
+    const requestData = {
       userId: req.user.id,
-      petId,
+      petId: petId || null,
       description,
       location: {
         type: 'Point',
         coordinates: location.coordinates // [lng, lat]
       },
       status: 'OPEN'
-    });
+    };
+
+    if (isMockDoctor && mockDoctorMap[doctorId]) {
+      requestData.status = 'ASSIGNED';
+      requestData.mockDoctor = mockDoctorMap[doctorId];
+    } else if (doctorId && !isMockDoctor) {
+      // If a specific real doctor was targeted
+      requestData.acceptedBy = doctorId;
+    }
+
+    const request = await RequestModel.create(requestData);
 
     // Notify nearby doctors via socket
     const io = req.app.get('io');
-    // Find nearby doctors (business logic for matching can be complex, here we broadcast)
-    // In a real app, you'd query doctors within radius and emit to their specific rooms
-    io.to('doctors_room').emit('request:new', {
-      requestId: request._id,
-      description: request.description,
-      location: request.location.coordinates,
-      userName: `${req.user.name.first} ${req.user.name.last}`
-    });
+    if (io) {
+      io.to('doctors_room').emit('request:new', {
+        requestId: request._id,
+        description: request.description,
+        location: request.location.coordinates,
+        userName: `${req.user.name?.first || 'User'} ${req.user.name?.last || ''}`.trim()
+      });
+    }
 
     res.status(201).json(request);
   } catch (error) {
+    console.error('Error creating request:', error);
     res.status(500).json({ message: error.message });
   }
 };

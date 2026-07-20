@@ -10,6 +10,7 @@ import {
   Alert
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemeContext } from '../../context/ThemeContext';
 import api from '../../services/api';
 import { getSocket, initSocket } from '../../services/socket';
@@ -20,6 +21,7 @@ export default function DoctorHomeScreen() {
   const [loading, setLoading] = useState(true);
 
   const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
   const { theme } = useContext(ThemeContext);
 
   useEffect(() => {
@@ -85,7 +87,7 @@ export default function DoctorHomeScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <View style={[styles.header, { backgroundColor: theme.surface }]}>
+      <View style={[styles.header, { backgroundColor: theme.surface, paddingTop: Math.max(insets.top + 10, 40) }]}>
         <Text style={[styles.headerTitle, { color: theme.text }]}>Doctor Dashboard</Text>
         <View style={styles.availability}>
           <Text style={{ color: theme.textSecondary, marginRight: 10 }}>

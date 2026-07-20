@@ -91,7 +91,7 @@ export default function RequestsScreen() {
           data={requests}
           keyExtractor={(item) => item._id}
           renderItem={renderRequestItem}
-          contentContainerStyle={{ paddingBottom: 100 }}
+          contentContainerStyle={{ paddingBottom: 110 }}
         />
       )}
     </View>

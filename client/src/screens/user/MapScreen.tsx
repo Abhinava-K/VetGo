@@ -268,7 +268,7 @@ export default function MapScreen() {
 
     const tileUrl = isDark
       ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-      : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+      : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
 
     return `
       <!DOCTYPE html>
@@ -279,7 +279,7 @@ export default function MapScreen() {
         <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
         <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
         <style>
-          html, body, #map { height: 100%; width: 100%; margin: 0; padding: 0; background: ${isDark ? '#212121' : '#e5e7eb'}; }
+          html, body, #map { height: 100%; width: 100%; margin: 0; padding: 0; background: ${isDark ? '#1a1a1a' : '#f3f4f6'}; }
           .user-marker {
             width: 18px;
             height: 18px;
@@ -287,6 +287,10 @@ export default function MapScreen() {
             border: 3px solid #FFFFFF;
             border-radius: 50%;
             box-shadow: 0 0 12px rgba(37, 99, 235, 0.9);
+          }
+          .leaflet-tile {
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: crisp-edges;
           }
         </style>
       </head>
@@ -301,10 +305,13 @@ export default function MapScreen() {
             }
           }
 
-          var map = L.map('map', { zoomControl: false }).setView([${userLat}, ${userLng}], 14);
+          var map = L.map('map', { zoomControl: false, maxZoom: 20 }).setView([${userLat}, ${userLng}], 15);
           L.tileLayer('${tileUrl}', {
-            maxZoom: 19,
-            attribution: '&copy; OpenStreetMap contributors'
+            maxZoom: 20,
+            maxNativeZoom: 19,
+            detectRetina: true,
+            subdomains: 'abcd',
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
           }).addTo(map);
 
           var userIcon = L.divIcon({ className: 'user-marker', iconSize: [18, 18] });
@@ -348,6 +355,11 @@ export default function MapScreen() {
           mapType="standard"
           showsUserLocation={true}
           showsMyLocationButton={false}
+          showsBuildings={true}
+          showsIndoors={true}
+          showsPointsOfInterests={true}
+          showsCompass={true}
+          showsScale={true}
           onPress={() => setSelectedDoctor(null)}
         >
           {location && (
@@ -492,7 +504,7 @@ export default function MapScreen() {
       </View>
 
       {/* Floating Buttons: Recenter & Loading */}
-      <View style={styles.floatingActionContainer}>
+      <View style={styles.floatingControls}>
         {loading && (
           <View style={[styles.iconButton, { backgroundColor: theme.surface, marginBottom: 10 }]}>
             <ActivityIndicator size="small" color={theme.primary} />

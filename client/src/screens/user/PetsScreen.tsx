@@ -111,7 +111,7 @@ export default function PetsScreen() {
           data={pets}
           keyExtractor={(item) => item._id}
           renderItem={renderPet}
-          contentContainerStyle={{ paddingBottom: 100 }}
+          contentContainerStyle={{ paddingBottom: 110 }}
         />
       )}
     </View>

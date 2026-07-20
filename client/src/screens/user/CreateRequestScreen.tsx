@@ -10,6 +10,7 @@ import {
   ActivityIndicator
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemeContext } from '../../context/ThemeContext';
 import api from '../../services/api';
 import { getSocket } from '../../services/socket';
@@ -23,8 +24,9 @@ export default function CreateRequestScreen() {
 
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const { location } = route.params; // Expects { coordinates: [lng, lat] }
+  const { location, doctorId } = route.params || {};
 
+  const insets = useSafeAreaInsets();
   const { theme } = useContext(ThemeContext);
 
   useEffect(() => {
@@ -53,7 +55,8 @@ export default function CreateRequestScreen() {
       const { data } = await api.post('/requests', {
         description,
         location,
-        petId
+        petId,
+        doctorId
       });
 
       Alert.alert('Success', 'Request broadcasted to nearby doctors!');
@@ -66,9 +69,18 @@ export default function CreateRequestScreen() {
   };
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: theme.background }]}>
-      <View style={styles.content}>
-        <Text style={[styles.label, { color: theme.text }]}>What is the emergency?</Text>
+    <ScrollView 
+      style={[styles.container, { backgroundColor: theme.background }]}
+      contentContainerStyle={[
+        styles.content,
+        { 
+          paddingTop: Math.max(insets.top + 15, 30),
+          paddingBottom: Math.max(insets.bottom + 20, 30)
+        }
+      ]}
+      showsVerticalScrollIndicator={false}
+    >
+      <Text style={[styles.label, { color: theme.text }]}>What is the emergency?</Text>
         <TextInput
           style={[styles.textArea, { 
             backgroundColor: theme.surface, 
@@ -122,7 +134,6 @@ export default function CreateRequestScreen() {
             <Text style={styles.submitBtnText}>Broadcast Emergency Request</Text>
           )}
         </TouchableOpacity>
-      </View>
     </ScrollView>
   );
 }

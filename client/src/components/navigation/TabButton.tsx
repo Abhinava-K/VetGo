@@ -35,7 +35,7 @@ export const TabButton: React.FC<TabButtonProps> = ({
         {
           translateY: withSpring(isFocused ? 10 : 0, SPRING_CONFIG),
         },
-      ],
+      ] as const,
     };
   });
 

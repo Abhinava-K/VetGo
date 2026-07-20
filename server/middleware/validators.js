@@ -25,10 +25,12 @@ const loginSchema = Joi.object({
 const requestSchema = Joi.object({
   description: Joi.string().max(400).required(),
   location: Joi.object({
+    type: Joi.string().valid('Point').optional(),
     coordinates: Joi.array().items(Joi.number()).length(2).required()
-  }).required(),
-  petId: Joi.string().optional()
-});
+  }).required().unknown(true),
+  petId: Joi.string().optional().allow('', null),
+  doctorId: Joi.string().optional().allow('', null)
+}).unknown(true);
 
 const validate = (schema) => (req, res, next) => {
   const { error } = schema.validate(req.body);

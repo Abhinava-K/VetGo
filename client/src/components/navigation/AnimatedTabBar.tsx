@@ -37,7 +37,7 @@ export const AnimatedTabBar: React.FC<BottomTabBarProps> = ({
   const activeIndex = state.index;
   const activeX = useSharedValue((activeIndex + 0.5) * tabWidth);
   const bubbleScale = useSharedValue(1);
-  const bubbleY = useSharedValue(-DIP_HEIGHT + 4);
+  const bubbleY = useSharedValue(-15);
 
   useEffect(() => {
     const targetX = (activeIndex + 0.5) * tabWidth;
@@ -45,21 +45,25 @@ export const AnimatedTabBar: React.FC<BottomTabBarProps> = ({
 
     // Micro-interactions for bubble bounce & icon scale
     bubbleScale.value = withSequence(
-      withTiming(0.85, { duration: 100 }),
-      withSpring(1.1, SPRING_CONFIG),
+      withTiming(0.88, { duration: 100 }),
+      withSpring(1.08, SPRING_CONFIG),
       withSpring(1, SPRING_CONFIG)
     );
     bubbleY.value = withSequence(
-      withTiming(-DIP_HEIGHT - 6, { duration: 120 }),
-      withSpring(-DIP_HEIGHT + 2, SPRING_CONFIG)
+      withTiming(-19, { duration: 120 }),
+      withSpring(-15, SPRING_CONFIG)
     );
   }, [activeIndex, tabWidth]);
+
+  const bottomInset = Math.max(insets.bottom, 0);
+  const totalBarHeight = TAB_BAR_HEIGHT + bottomInset;
+  const svgFillHeight = totalBarHeight + 40;
 
   const animatedPathProps = useAnimatedProps(() => {
     if (!Svg || !AnimatedPath) return {};
     const path = createSvgPath(
       screenWidth,
-      TAB_BAR_HEIGHT,
+      svgFillHeight,
       activeX.value,
       DIP_WIDTH,
       DIP_HEIGHT
@@ -73,7 +77,7 @@ export const AnimatedTabBar: React.FC<BottomTabBarProps> = ({
         { translateX: activeX.value - BUBBLE_SIZE / 2 },
         { translateY: bubbleY.value },
         { scale: bubbleScale.value },
-      ],
+      ] as const,
     };
   });
 
@@ -83,15 +87,13 @@ export const AnimatedTabBar: React.FC<BottomTabBarProps> = ({
     DEFAULT_TABS[activeIndex] ||
     DEFAULT_TABS[0];
 
-  const bottomInset = Math.max(insets.bottom - 4, 4);
-
   return (
     <View
       style={[
         styles.container,
         {
           paddingBottom: bottomInset,
-          height: TAB_BAR_HEIGHT + bottomInset,
+          height: totalBarHeight,
         },
       ]}
     >
@@ -99,8 +101,8 @@ export const AnimatedTabBar: React.FC<BottomTabBarProps> = ({
       {Svg && AnimatedPath ? (
         <Svg
           width={screenWidth}
-          height={TAB_BAR_HEIGHT + bottomInset}
-          style={StyleSheet.absoluteFill}
+          height={svgFillHeight}
+          style={{ position: 'absolute', top: 0, left: 0, right: 0 }}
         >
           <AnimatedPath
             animatedProps={animatedPathProps}
@@ -174,7 +176,7 @@ export const AnimatedTabBar: React.FC<BottomTabBarProps> = ({
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    bottom: -4,
+    bottom: 0,
     left: 0,
     right: 0,
     backgroundColor: 'transparent',
