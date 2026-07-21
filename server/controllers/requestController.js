@@ -90,19 +90,23 @@ exports.acceptRequest = async (req, res) => {
     // 3. Prepare data for response (including decrypted user phone)
     const userPhone = decryptField(request.userId.phoneEncrypted);
     
-    const doctor = await User.findById(doctorId).select('name');
+    const doctor = await User.findById(doctorId).select('name phoneEncrypted');
     const doctorProfile = await DoctorProfile.findOne({ userId: doctorId });
 
-    // 4. Notify the user
+    const doctorPhone = doctor.phoneEncrypted ? decryptField(doctor.phoneEncrypted) : '';
+
+    // 4. Notify the user via socket
     const io = req.app.get('io');
-    io.to(request.userId._id.toString()).emit('request:accepted', {
-      requestId: request._id,
-      doctorId: doctor._id,
-      doctorName: `${doctor.name.first} ${doctor.name.last}`,
-      qualification: doctorProfile.qualifications,
-      ratingAvg: doctorProfile.ratingAvg,
-      phone: decryptField(req.user.phoneEncrypted) // Doctor's phone
-    });
+    if (io) {
+      io.to(request.userId._id.toString()).emit('request:accepted', {
+        requestId: request._id,
+        doctorId: doctor._id,
+        doctorName: `${doctor.name?.first || 'Dr.'} ${doctor.name?.last || ''}`.trim(),
+        qualification: doctorProfile?.qualifications || 'Veterinarian',
+        ratingAvg: doctorProfile?.ratingAvg || 5.0,
+        phone: doctorPhone
+      });
+    }
 
     res.json({
       ...request.toObject(),
@@ -136,12 +140,13 @@ exports.startRequest = async (req, res) => {
       return res.status(400).json({ message: 'Request cannot be started (must be ASSIGNED to you)' });
     }
 
-    // Notify the user via socket
     const io = req.app.get('io');
-    io.to(request.userId.toString()).emit('request:update', {
-      requestId: request._id,
-      status: 'IN_PROGRESS'
-    });
+    if (io) {
+      io.to(request.userId.toString()).emit('request:update', {
+        requestId: request._id,
+        status: 'IN_PROGRESS'
+      });
+    }
 
     res.json({
       message: 'Request started successfully',
@@ -163,7 +168,6 @@ exports.completeRequest = async (req, res) => {
       return res.status(404).json({ message: 'Request not found' });
     }
 
-    // Only the user who created the request can complete it (and provide rating)
     if (request.userId.toString() !== req.user.id) {
       return res.status(403).json({ message: 'Not authorized to complete this request' });
     }
@@ -173,7 +177,6 @@ exports.completeRequest = async (req, res) => {
     request.rating = { score: rating, review };
     await request.save();
 
-    // Update doctor's stats
     const doctorProfile = await DoctorProfile.findOne({ userId: request.acceptedBy });
     if (doctorProfile) {
       const totalScore = (doctorProfile.ratingAvg * doctorProfile.ratingCount) + rating;
@@ -184,9 +187,10 @@ exports.completeRequest = async (req, res) => {
       await doctorProfile.save();
     }
 
-    // Notify doctor
     const io = req.app.get('io');
-    io.to(request.acceptedBy.toString()).emit('request:completed', { requestId: request._id });
+    if (io && request.acceptedBy) {
+      io.to(request.acceptedBy.toString()).emit('request:completed', { requestId: request._id });
+    }
 
     res.json({ message: 'Request completed and rated', request });
   } catch (error) {
@@ -216,30 +220,43 @@ exports.getMyRequests = async (req, res) => {
   }
 };
 
+// @desc    Get all OPEN emergency requests (for doctors)
+// @route   GET /api/requests/open
+exports.getOpenRequests = async (req, res) => {
+  try {
+    const requests = await RequestModel.find({ status: 'OPEN' })
+      .populate('userId', 'name')
+      .populate('petId')
+      .sort({ createdAt: -1 });
+    res.json(requests);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // @desc    Get request by ID
 // @route   GET /api/requests/:id
 exports.getRequestById = async (req, res) => {
   try {
     const request = await RequestModel.findById(req.params.id)
       .populate('userId', 'name phoneEncrypted')
+      .populate('acceptedBy', 'name phoneEncrypted')
       .populate('petId');
-      
+
     if (!request) {
       return res.status(404).json({ message: 'Request not found' });
     }
 
-    if (request.userId._id.toString() !== req.user.id && request.acceptedBy?.toString() !== req.user.id) {
-      return res.status(403).json({ message: 'Not authorized to view this request' });
+    const reqObj = request.toObject();
+
+    // If requester or accepted doctor is viewing, include decrypted phone
+    if (req.user.role === 'DOCTOR' && request.acceptedBy && request.acceptedBy._id.toString() === req.user.id) {
+      reqObj.userPhone = request.userId.phoneEncrypted ? decryptField(request.userId.phoneEncrypted) : null;
+    } else if (req.user.id === request.userId._id.toString() && request.acceptedBy) {
+      reqObj.doctorPhone = request.acceptedBy.phoneEncrypted ? decryptField(request.acceptedBy.phoneEncrypted) : null;
     }
 
-    const requestObj = request.toObject();
-    
-    // Decrypt user phone number for the assigned doctor
-    if (request.acceptedBy?.toString() === req.user.id) {
-      requestObj.userPhone = decryptField(request.userId.phoneEncrypted);
-    }
-
-    res.json(requestObj);
+    res.json(reqObj);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

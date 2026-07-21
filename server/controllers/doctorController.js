@@ -6,9 +6,21 @@ const { decryptField } = require('../middleware/encryption');
 // @route   GET /api/doctors/profile
 exports.getDoctorProfile = async (req, res) => {
   try {
-    const profile = await DoctorProfile.findOne({ userId: req.user.id });
+    const profile = await DoctorProfile.findOne({ userId: req.user.id }).populate('userId', 'name email phoneEncrypted');
     if (!profile) return res.status(404).json({ message: 'Profile not found' });
-    res.json(profile);
+    
+    const userObj = profile.userId ? profile.userId.toObject() : {};
+    const phone = userObj.phoneEncrypted ? decryptField(userObj.phoneEncrypted) : '';
+
+    res.json({
+      ...profile.toObject(),
+      user: {
+        _id: userObj._id,
+        name: userObj.name,
+        email: userObj.email,
+        phone
+      }
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

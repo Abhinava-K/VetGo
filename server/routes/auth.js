@@ -9,7 +9,8 @@ const {
   refreshToken, 
   logout,
   getMe,
-  resetPasswordWithPhone
+  resetPasswordWithPhone,
+  deleteAccount
 } = require('../controllers/authController');
 const { 
   validate, 
@@ -50,5 +51,6 @@ router.post('/forgot-password', resetPasswordWithPhone);
 router.post('/refresh', refreshToken);
 router.post('/logout', logout);
 router.get('/me', protect, getMe);
+router.delete('/delete-account', protect, deleteAccount);
 
 module.exports = router;

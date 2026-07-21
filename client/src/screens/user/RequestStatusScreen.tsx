@@ -120,19 +120,26 @@ export default function RequestStatusScreen() {
         ) : (
           <View>
             <Text style={[styles.docName, { color: theme.text }]}>
-              {request.doctor?.doctorName || request.mockDoctor?.name || 'Doctor assigned'}
+              {request.doctor?.doctorName || 
+                (request.acceptedBy?.name ? `Dr. ${request.acceptedBy.name.first} ${request.acceptedBy.name.last}` : null) || 
+                request.mockDoctor?.name || 
+                'Doctor Assigned'}
             </Text>
-            <Text style={{ color: theme.textSecondary }}>
+            <Text style={{ color: theme.textSecondary, marginTop: 2 }}>
               {request.doctor?.qualification || request.mockDoctor?.qualification || 'Veterinary Specialist'}
             </Text>
             <TouchableOpacity 
               style={[styles.callBtn, { backgroundColor: theme.primary }]}
               onPress={() => {
-                const phone = request.doctor?.phone || request.mockDoctor?.phone;
-                if (phone) Linking.openURL(`tel:${phone}`);
+                const phone = request.doctor?.phone || request.doctorPhone || request.mockDoctor?.phone;
+                if (phone) {
+                  Linking.openURL(`tel:${phone}`);
+                } else {
+                  Alert.alert('No Contact Number', 'Doctor phone number is unavailable.');
+                }
               }}
             >
-              <Text style={styles.callBtnText}>Call Doctor</Text>
+              <Text style={styles.callBtnText}>📞 Call Doctor</Text>
             </TouchableOpacity>
 
             {(request.status === 'ASSIGNED' || request.status === 'IN_PROGRESS') && (

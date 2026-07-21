@@ -72,6 +72,30 @@ export default function ProfileScreen() {
     );
   };
 
+  const handleDeleteAccountPress = () => {
+    Alert.alert(
+      'Delete Account',
+      'Are you sure you want to permanently delete your account and personal data? Your rescue history will be saved anonymously. This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Delete Account', 
+          style: 'destructive', 
+          onPress: async () => {
+            try {
+              await api.delete('/auth/delete-account');
+              Alert.alert('Account Deleted', 'Your account has been permanently deleted.');
+              logout();
+            } catch (error: any) {
+              const msg = error.response?.data?.message || 'Failed to delete account. Please try again.';
+              Alert.alert('Error', msg);
+            }
+          } 
+        }
+      ]
+    );
+  };
+
   const formatPhone = (phoneStr: string) => {
     if (!phoneStr) return 'N/A';
     if (phoneStr.length < 4) return phoneStr;
@@ -218,6 +242,14 @@ export default function ProfileScreen() {
       >
         <Feather name="log-out" size={20} color={theme.error} style={{ marginRight: 10 }} />
         <Text style={[styles.logoutText, { color: theme.error }]}>Log Out of VetGo</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity 
+        style={[styles.deleteBtn, { backgroundColor: 'rgba(239, 68, 68, 0.12)', borderColor: '#EF4444' }]}
+        onPress={handleDeleteAccountPress}
+      >
+        <Feather name="trash-2" size={20} color="#EF4444" style={{ marginRight: 10 }} />
+        <Text style={[styles.deleteText, { color: '#EF4444' }]}>Delete Account</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -367,6 +399,25 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
   },
   logoutText: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  deleteBtn: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: 55,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginTop: 12,
+    marginBottom: 20,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+  },
+  deleteText: {
     fontSize: 16,
     fontWeight: '700',
   },

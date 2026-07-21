@@ -1,6 +1,8 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const DoctorProfile = require('../models/DoctorProfile');
+const Pet = require('../models/Pet');
+const RequestModel = require('../models/Request');
 const { encryptField, decryptField } = require('../middleware/encryption');
 
 const generateToken = (id, role) => {
@@ -73,13 +75,13 @@ exports.signupDoctor = async (req, res) => {
 
     const phoneEncrypted = encryptField(phone);
 
-    // Create user with role USER initially (Admin approves to change to DOCTOR)
+    // Create user with role DOCTOR
     const user = await User.create({
       name: { first: firstName, last: lastName },
       email,
       passwordHash: password,
       phoneEncrypted,
-      role: 'USER'
+      role: 'DOCTOR'
     });
 
     // Create Doctor Profile (Pending)
@@ -231,6 +233,45 @@ exports.resetPasswordWithPhone = async (req, res) => {
     res.json({ message: 'Password reset successfully! You can now log in.' });
   } catch (error) {
     console.error('[AUTH] Forgot password error:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Delete user account and anonymize emergency requests
+// @route   DELETE /api/auth/delete-account
+exports.deleteAccount = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // 1. Anonymize user's emergency requests (unlink userId)
+    await RequestModel.updateMany(
+      { userId },
+      { $set: { userId: null } }
+    );
+
+    // 2. Find user
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // 3. Delete user's registered pets
+    await Pet.deleteMany({ ownerId: userId });
+
+    // 4. Delete doctor profile if user was a doctor
+    if (user.role === 'DOCTOR') {
+      await DoctorProfile.deleteOne({ userId });
+    }
+
+    // 5. Delete user account
+    await User.findByIdAndDelete(userId);
+
+    // 6. Clear cookie
+    res.clearCookie('refreshToken');
+
+    res.json({ message: 'Account and personal data deleted successfully.' });
+  } catch (error) {
+    console.error('[AUTH] Delete account error:', error);
     res.status(500).json({ message: error.message });
   }
 };

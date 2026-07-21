@@ -6,12 +6,14 @@ const {
   startRequest,
   completeRequest,
   getMyRequests,
+  getOpenRequests,
   getRequestById
 } = require('../controllers/requestController');
 const { protect, authorize } = require('../middleware/auth');
 const { validate, requestSchema } = require('../middleware/validators');
 
 router.get('/my-requests', protect, getMyRequests);
+router.get('/open', protect, authorize('DOCTOR'), getOpenRequests);
 router.get('/:id', protect, getRequestById);
 router.post('/', protect, authorize('USER'), validate(requestSchema), createRequest);
 router.post('/:id/accept', protect, authorize('DOCTOR'), acceptRequest);

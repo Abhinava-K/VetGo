@@ -57,8 +57,12 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.passwordHash);
 };
 
-// Pre-save hook to hash password if modified
+// Pre-save hook to hash password if modified and safeguard ADMIN role
 userSchema.pre('save', async function(next) {
+  if (this.isModified('role') && this.role === 'ADMIN' && !this._allowAdminRole) {
+    return next(new Error("ADMIN tag cannot be assigned via application API. It is strictly reserved for direct database access by the owner."));
+  }
+
   if (!this.isModified('passwordHash')) return next();
   
   const salt = await bcrypt.genSalt(parseInt(process.env.BCRYPT_SALT_ROUNDS) || 12);
