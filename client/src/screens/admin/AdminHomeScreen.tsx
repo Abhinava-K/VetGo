@@ -9,6 +9,8 @@ import {
   RefreshControl,
   Alert,
   ScrollView,
+  Modal,
+  TextInput,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -16,17 +18,31 @@ import { Ionicons } from '@expo/vector-icons';
 import { ThemeContext } from '../../context/ThemeContext';
 import { AuthContext } from '../../context/AuthContext';
 import api from '../../services/api';
+import SlideButton from '../../components/common/SlideButton';
 
 type TabType = 'applications' | 'requests' | 'stats';
 
 export default function AdminHomeScreen() {
   const [activeTab, setActiveTab] = useState<TabType>('applications');
+  const [docSubTab, setDocSubTab] = useState<'pending' | 'verified'>('pending');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  
+
   const [stats, setStats] = useState<any>(null);
   const [applications, setApplications] = useState<any[]>([]);
   const [requests, setRequests] = useState<any[]>([]);
+
+  // Termination Modal State
+  const [terminationModalVisible, setTerminationModalVisible] = useState(false);
+  const [selectedDoctorId, setSelectedDoctorId] = useState<string | null>(null);
+  const [selectedDoctorName, setSelectedDoctorName] = useState('');
+  const [terminationReason, setTerminationReason] = useState('');
+
+  // Reviews Modal State
+  const [reviewsModalVisible, setReviewsModalVisible] = useState(false);
+  const [doctorReviews, setDoctorReviews] = useState<any[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [selectedDoctorReviewsName, setSelectedDoctorReviewsName] = useState('');
 
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
@@ -62,32 +78,19 @@ export default function AdminHomeScreen() {
   };
 
   const handleApproveDoctor = async (userId: string, name: string) => {
-    Alert.alert(
-      'Approve Doctor',
-      `Are you sure you want to approve ${name}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Approve',
-          style: 'default',
-          onPress: async () => {
-            try {
-              await api.post(`/admin/doctor-applications/${userId}/approve`);
-              Alert.alert('Success', `${name} has been approved!`);
-              loadAdminData();
-            } catch (error: any) {
-              Alert.alert('Error', error.response?.data?.message || 'Failed to approve');
-            }
-          },
-        },
-      ]
-    );
+    try {
+      await api.post(`/admin/doctor-applications/${userId}/approve`);
+      Alert.alert('Success', `${name} has been approved!`);
+      loadAdminData();
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.message || 'Failed to approve');
+    }
   };
 
   const handleRejectDoctor = async (userId: string, name: string) => {
     Alert.alert(
       'Reject Application',
-      `Reject ${name}'s application?`,
+      `Are you sure you want to reject ${name}'s application?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -107,6 +110,36 @@ export default function AdminHomeScreen() {
         },
       ]
     );
+  };
+
+  const handleTerminateDoctor = async () => {
+    if (!selectedDoctorId) return;
+    try {
+      await api.post(`/admin/doctors/${selectedDoctorId}/terminate`, {
+        reason: terminationReason,
+      });
+      Alert.alert('Terminated', `${selectedDoctorName} has been terminated.`);
+      setTerminationModalVisible(false);
+      loadAdminData();
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.message || 'Failed to terminate account');
+    }
+  };
+
+  const handleViewDoctorReviews = async (doctorId: string, doctorName: string) => {
+    setSelectedDoctorReviewsName(doctorName);
+    setReviewsModalVisible(true);
+    setReviewsLoading(true);
+    setDoctorReviews([]);
+    try {
+      const { data } = await api.get(`/admin/doctors/${doctorId}/reviews`);
+      setDoctorReviews(data);
+    } catch (error) {
+      console.error('Error fetching doctor reviews:', error);
+      Alert.alert('Error', 'Failed to load doctor reviews.');
+    } finally {
+      setReviewsLoading(false);
+    }
   };
 
   const renderApplicationCard = ({ item }: { item: any }) => {
@@ -156,23 +189,143 @@ export default function AdminHomeScreen() {
           </View>
         ) : null}
 
+        {item.docs && item.docs.length > 0 && (
+          <View style={styles.docsSection}>
+            <Text style={[styles.docsLabel, { color: theme.textSecondary }]}>Verification Documents:</Text>
+            {item.docs.map((doc: any, index: number) => {
+              const fileUrl = `${api.defaults.baseURL?.replace('/api', '')}/uploads/doctorDocs/${doc.filename}`;
+              return (
+                <TouchableOpacity 
+                  key={index} 
+                  style={[styles.docItem, { backgroundColor: theme.background, borderColor: theme.border }]}
+                  onPress={() => {
+                    import('react-native').then(({ Linking }) => {
+                      Linking.openURL(fileUrl).catch(() => {
+                        Alert.alert('Error', 'Cannot open document URL');
+                      });
+                    });
+                  }}
+                >
+                  <Ionicons name="document-text-outline" size={18} color={theme.primary} />
+                  <Text style={[styles.docNameText, { color: theme.primary }]} numberOfLines={1}>
+                    {doc.filename || `Document ${index + 1}`}
+                  </Text>
+                  <Ionicons name="open-outline" size={14} color={theme.textSecondary} style={{ marginLeft: 'auto' }} />
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
+
         {isPending && item.userId?._id && (
-          <View style={styles.actionRow}>
+          <View style={styles.actionColumn}>
+            <View style={{ marginBottom: 8, marginTop: 14 }}>
+              <SlideButton 
+                title="Slide to Approve Doctor"
+                color="#10B981"
+                icon="checkmark-circle"
+                onSlideComplete={() => handleApproveDoctor(item.userId._id, doctorName)}
+              />
+            </View>
             <TouchableOpacity
-              style={[styles.btn, styles.btnReject]}
+              style={[styles.btn, styles.btnReject, { width: '100%', height: 44 }]}
               onPress={() => handleRejectDoctor(item.userId._id, doctorName)}
             >
               <Ionicons name="close-circle-outline" size={18} color="#EF4444" />
-              <Text style={styles.btnRejectText}>Reject</Text>
+              <Text style={styles.btnRejectText}>Reject Application</Text>
             </TouchableOpacity>
+          </View>
+        )}
+      </View>
+    );
+  };
 
-            <TouchableOpacity
-              style={[styles.btn, styles.btnApprove]}
-              onPress={() => handleApproveDoctor(item.userId._id, doctorName)}
+  const renderVerifiedDoctorCard = ({ item }: { item: any }) => {
+    const doctorName = item.userId
+      ? `${item.userId.name?.first || 'Dr.'} ${item.userId.name?.last || ''}`.trim()
+      : 'Verified Doctor';
+
+    const doctorEmail = item.userId?.email || 'N/A';
+    const isTerminated = item.userId?.isDeleted === true;
+    const ratingAvg = item.ratingAvg || 5.0;
+
+    return (
+      <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+        <View style={styles.cardHeader}>
+          <View style={styles.avatarCircle}>
+            <Ionicons name="ribbon-outline" size={20} color="#10B981" />
+          </View>
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <Text style={[styles.cardTitle, { color: theme.text }]}>{doctorName}</Text>
+            <Text style={[styles.cardSub, { color: theme.textSecondary }]}>{doctorEmail}</Text>
+          </View>
+          <View
+            style={[
+              styles.badge,
+              {
+                backgroundColor: isTerminated ? '#FDE8E8' : '#DEF7EC',
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.badgeText,
+                {
+                  color: isTerminated ? '#9B1C1C' : '#03543F',
+                },
+              ]}
             >
-              <Ionicons name="checkmark-circle-outline" size={18} color="#FFFFFF" />
-              <Text style={styles.btnApproveText}>Approve Doctor</Text>
-            </TouchableOpacity>
+              {isTerminated ? 'TERMINATED' : 'ACTIVE'}
+            </Text>
+          </View>
+        </View>
+
+        {item.qualifications ? (
+          <View style={styles.qualSection}>
+            <Text style={[styles.qualLabel, { color: theme.textSecondary }]}>Qualifications:</Text>
+            <Text style={[styles.qualText, { color: theme.text }]}>{item.qualifications}</Text>
+          </View>
+        ) : null}
+
+        <TouchableOpacity 
+          style={styles.statsDashboard}
+          onPress={() => handleViewDoctorReviews(item.userId?._id, doctorName)}
+        >
+          <View style={styles.statDashboardItem}>
+            <Ionicons name="star" size={16} color="#F59E0B" />
+            <Text style={[styles.statDashboardText, { color: theme.textSecondary }]}>
+              {' '}{ratingAvg.toFixed(1)} Rating
+            </Text>
+          </View>
+          <View style={styles.statDashboardItem}>
+            <Ionicons name="chatbubble-ellipses-outline" size={16} color="#6366F1" />
+            <Text style={[styles.statDashboardText, { color: '#6366F1', fontWeight: 'bold' }]}>
+              {' '}View {item.ratingCount || 0} Reviews
+            </Text>
+            <Ionicons name="chevron-forward" size={14} color="#6366F1" style={{ marginLeft: 4 }} />
+          </View>
+        </TouchableOpacity>
+
+        {isTerminated && item.userId?.terminationReason ? (
+          <View style={[styles.terminatedReasonSection, { backgroundColor: `${theme.error}10`, borderColor: theme.border }]}>
+            <Text style={[styles.terminatedReasonLabel, { color: theme.error }]}>Termination Reason:</Text>
+            <Text style={[styles.terminatedReasonText, { color: theme.text }]}>{item.userId.terminationReason}</Text>
+          </View>
+        ) : null}
+
+        {!isTerminated && item.userId?._id && (
+          <View style={[styles.actionColumn, { marginTop: 14 }]}>
+            <SlideButton 
+              title="Slide to Terminate Account"
+              color="#EF4444"
+              icon="trash-outline"
+              onSlideComplete={() => {
+                setSelectedDoctorId(item.userId._id);
+                setSelectedDoctorName(doctorName);
+                setTerminationReason('');
+                setTerminationModalVisible(true);
+              }}
+            />
           </View>
         )}
       </View>
@@ -230,6 +383,9 @@ export default function AdminHomeScreen() {
     }
   };
 
+  const pendingApps = applications.filter(app => app.docs && app.docs.some((d: any) => d.status === 'PENDING'));
+  const verifiedVets = applications.filter(app => app.docs && app.docs.every((d: any) => d.status === 'APPROVED'));
+
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Header Bar */}
@@ -266,7 +422,7 @@ export default function AdminHomeScreen() {
                 { color: activeTab === 'applications' ? '#6366F1' : theme.textSecondary },
               ]}
             >
-              Doctor Applications ({applications.length})
+              Vets Control ({applications.length})
             </Text>
           </TouchableOpacity>
 
@@ -309,21 +465,62 @@ export default function AdminHomeScreen() {
           </Text>
         </View>
       ) : activeTab === 'applications' ? (
-        <FlatList
-          data={applications}
-          keyExtractor={(item) => item._id}
-          renderItem={renderApplicationCard}
-          contentContainerStyle={styles.listContent}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-          ListEmptyComponent={
-            <View style={styles.emptyState}>
-              <Ionicons name="checkmark-done-circle-outline" size={48} color={theme.textSecondary} />
-              <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
-                No pending doctor applications found.
+        <View style={{ flex: 1 }}>
+          {/* Sub-tabs segment selector */}
+          <View style={[styles.subTabsRow, { borderBottomColor: theme.border, backgroundColor: theme.surface }]}>
+            <TouchableOpacity 
+              style={[styles.subTabItem, docSubTab === 'pending' && { borderBottomColor: theme.secondary, borderBottomWidth: 2 }]}
+              onPress={() => setDocSubTab('pending')}
+            >
+              <Text style={[styles.subTabText, { color: docSubTab === 'pending' ? theme.secondary : theme.textSecondary, fontWeight: docSubTab === 'pending' ? 'bold' : 'normal' }]}>
+                Pending Reviews ({pendingApps.length})
               </Text>
-            </View>
-          }
-        />
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.subTabItem, docSubTab === 'verified' && { borderBottomColor: theme.secondary, borderBottomWidth: 2 }]}
+              onPress={() => setDocSubTab('verified')}
+            >
+              <Text style={[styles.subTabText, { color: docSubTab === 'verified' ? theme.secondary : theme.textSecondary, fontWeight: docSubTab === 'verified' ? 'bold' : 'normal' }]}>
+                Verified Doctors ({verifiedVets.length})
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {docSubTab === 'pending' ? (
+            <FlatList
+              data={pendingApps}
+              keyExtractor={(item) => item._id}
+              renderItem={renderApplicationCard}
+              contentContainerStyle={styles.listContent}
+              refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+              ListEmptyComponent={
+                <View style={styles.emptyState}>
+                  <Ionicons name="checkmark-done-circle-outline" size={48} color={theme.textSecondary} />
+                  <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
+                    No pending doctor applications found.
+                  </Text>
+                </View>
+              }
+            />
+          ) : (
+            <FlatList
+              data={verifiedVets}
+              keyExtractor={(item) => item._id}
+              renderItem={renderVerifiedDoctorCard}
+              contentContainerStyle={styles.listContent}
+              refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+              ListEmptyComponent={
+                <View style={styles.emptyState}>
+                  <Ionicons name="people-outline" size={48} color={theme.textSecondary} />
+                  <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
+                    No verified doctors on the network yet.
+                  </Text>
+                </View>
+              }
+            />
+          )}
+        </View>
       ) : activeTab === 'requests' ? (
         <FlatList
           data={requests}
@@ -372,6 +569,119 @@ export default function AdminHomeScreen() {
           </View>
         </ScrollView>
       )}
+
+      {/* Termination Reason Input Modal */}
+      <Modal
+        visible={terminationModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setTerminationModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <Text style={[styles.modalTitle, { color: theme.text }]}>Terminate {selectedDoctorName}</Text>
+            
+            <Text style={[styles.modalLabel, { color: theme.textSecondary }]}>
+              Provide an optional reason for terminating this doctor. The reason will be displayed on their screen on login:
+            </Text>
+
+            <TextInput
+              style={[styles.modalInput, { backgroundColor: theme.background, color: theme.text, borderColor: theme.border }]}
+              placeholder="e.g. Repeated negative user reviews, malpractice, etc."
+              placeholderTextColor={theme.textSecondary}
+              multiline={true}
+              numberOfLines={4}
+              value={terminationReason}
+              onChangeText={setTerminationReason}
+            />
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity 
+                style={[styles.modalBtn, styles.modalBtnCancel, { borderColor: theme.border }]} 
+                onPress={() => setTerminationModalVisible(false)}
+              >
+                <Text style={[styles.modalBtnTextCancel, { color: theme.text }]}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.modalBtn, styles.modalBtnSubmit, { backgroundColor: '#EF4444' }]} 
+                onPress={handleTerminateDoctor}
+              >
+                <Text style={styles.modalBtnTextSubmit}>Terminate User</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* View Doctor Reviews Modal */}
+      <Modal
+        visible={reviewsModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setReviewsModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: theme.surface, borderColor: theme.border, maxHeight: '80%' }]}>
+            <Text style={[styles.modalTitle, { color: theme.text }]}>Reviews: {selectedDoctorReviewsName}</Text>
+            
+            {reviewsLoading ? (
+              <View style={{ paddingVertical: 40, alignItems: 'center' }}>
+                <ActivityIndicator size="large" color={theme.primary} />
+                <Text style={{ marginTop: 10, color: theme.textSecondary }}>Fetching reviews...</Text>
+              </View>
+            ) : doctorReviews.length === 0 ? (
+              <View style={{ paddingVertical: 40, alignItems: 'center' }}>
+                <Ionicons name="chatbubble-outline" size={40} color={theme.textSecondary} />
+                <Text style={{ marginTop: 10, color: theme.textSecondary, textAlign: 'center' }}>
+                  No reviews submitted for this doctor yet.
+                </Text>
+              </View>
+            ) : (
+              <FlatList
+                data={doctorReviews}
+                keyExtractor={(item) => item._id}
+                contentContainerStyle={{ paddingVertical: 10 }}
+                renderItem={({ item }) => (
+                  <View style={[styles.modalReviewCard, { borderColor: theme.border }]}>
+                    <View style={styles.modalReviewHeader}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <Ionicons 
+                            key={star} 
+                            name={star <= item.score ? 'star' : 'star-outline'} 
+                            size={14} 
+                            color="#F59E0B" 
+                            style={{ marginRight: 2 }}
+                          />
+                        ))}
+                      </View>
+                      <Text style={{ fontSize: 11, color: theme.textSecondary }}>
+                        {new Date(item.createdAt).toLocaleDateString()}
+                      </Text>
+                    </View>
+                    <Text style={[styles.modalReviewUser, { color: theme.text }]}>
+                      By: {item.userName}
+                    </Text>
+                    {item.review ? (
+                      <Text style={[styles.modalReviewComment, { color: theme.textSecondary }]}>
+                        "{item.review}"
+                      </Text>
+                    ) : null}
+                  </View>
+                )}
+              />
+            )}
+
+            <TouchableOpacity 
+              style={[styles.modalBtnClose, { backgroundColor: theme.primary }]} 
+              onPress={() => setReviewsModalVisible(false)}
+            >
+              <Text style={styles.modalBtnTextSubmit}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -492,6 +802,31 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: 4,
   },
+  docsSection: {
+    marginTop: 12,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+  },
+  docsLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 6,
+  },
+  docItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: 6,
+  },
+  docNameText: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 8,
+    flex: 0.9,
+  },
   actionRow: {
     flexDirection: 'row',
     marginTop: 14,
@@ -576,5 +911,146 @@ const styles = StyleSheet.create({
   emptyText: {
     marginTop: 12,
     fontSize: 14,
+  },
+  subTabsRow: {
+    flexDirection: 'row',
+    height: 48,
+    borderBottomWidth: 1,
+  },
+  subTabItem: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  subTabText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  statsDashboard: {
+    flexDirection: 'row',
+    marginTop: 12,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+  },
+  statDashboardItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 20,
+  },
+  statDashboardText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  terminatedReasonSection: {
+    marginTop: 12,
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  terminatedReasonLabel: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  terminatedReasonText: {
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  actionColumn: {
+    marginTop: 10,
+    width: '100%',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 340,
+    borderRadius: 20,
+    borderWidth: 1,
+    padding: 20,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  modalLabel: {
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 14,
+  },
+  modalInput: {
+    height: 90,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    textAlignVertical: 'top',
+    fontSize: 14,
+    marginBottom: 20,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  modalBtn: {
+    height: 48,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    flex: 0.48,
+  },
+  modalBtnCancel: {
+    borderWidth: 1,
+  },
+  modalBtnSubmit: {
+    // handled inline
+  },
+  modalBtnTextCancel: {
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  modalBtnTextSubmit: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  modalBtnClose: {
+    height: 48,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 15,
+    width: '100%',
+  },
+  modalReviewCard: {
+    borderBottomWidth: 1,
+    paddingVertical: 12,
+  },
+  modalReviewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  modalReviewUser: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  modalReviewComment: {
+    fontSize: 13,
+    fontStyle: 'italic',
   },
 });

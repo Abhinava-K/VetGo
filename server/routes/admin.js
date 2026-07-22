@@ -5,7 +5,9 @@ const {
   getPendingDoctors, 
   getAllRequests,
   approveDoctor, 
-  rejectDoctor 
+  rejectDoctor,
+  terminateDoctor,
+  getDoctorReviews
 } = require('../controllers/adminController');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -17,5 +19,7 @@ router.get('/doctor-applications', getPendingDoctors);
 router.get('/requests', getAllRequests);
 router.post('/doctor-applications/:userId/approve', approveDoctor);
 router.post('/doctor-applications/:userId/reject', rejectDoctor);
+router.post('/doctors/:userId/terminate', terminateDoctor);
+router.get('/doctors/:doctorId/reviews', getDoctorReviews);
 
 module.exports = router;

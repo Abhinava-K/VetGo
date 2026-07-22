@@ -11,6 +11,10 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  terminationReason: {
+    type: String,
+    default: ''
+  },
   name: {
     first: { type: String, required: true },
     last: { type: String, required: true }

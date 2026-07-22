@@ -30,6 +30,9 @@ export default function DoctorHomeScreen() {
   const { theme } = useContext(ThemeContext);
   const { logout } = useContext(AuthContext);
 
+  const isApproved = doctorProfile?.docs && doctorProfile.docs.length > 0 && doctorProfile.docs.every((d: any) => d.status === 'APPROVED');
+  const isRejected = doctorProfile?.docs && doctorProfile.docs.some((d: any) => d.status === 'REJECTED');
+
   useEffect(() => {
     fetchDoctorData();
     setupSocket();
@@ -188,14 +191,15 @@ export default function DoctorHomeScreen() {
             <Text
               style={[
                 styles.availText,
-                { color: available ? '#10B981' : theme.textSecondary },
+                { color: (available && isApproved) ? '#10B981' : theme.textSecondary },
               ]}
             >
-              {available ? 'ONLINE / ON CALL' : 'OFFLINE'}
+              {!isApproved ? 'AWAITING VERIFICATION' : available ? 'ONLINE / ON CALL' : 'OFFLINE'}
             </Text>
             <Switch
-              value={available}
+              value={isApproved ? available : false}
               onValueChange={toggleAvailability}
+              disabled={!isApproved}
               trackColor={{ false: '#767577', true: '#10B981' }}
               thumbColor="#FFFFFF"
             />
@@ -216,6 +220,26 @@ export default function DoctorHomeScreen() {
           <Text style={{ marginTop: 12, color: theme.textSecondary }}>
             Connecting to emergency network...
           </Text>
+        </View>
+      ) : !isApproved ? (
+        <View style={styles.pendingContainer}>
+          <Ionicons 
+            name={isRejected ? "alert-circle-outline" : "time-outline"} 
+            size={64} 
+            color={isRejected ? "#EF4444" : "#F59E0B"} 
+            style={{ marginBottom: 12 }}
+          />
+          <Text style={[styles.pendingTitle, { color: theme.text }]}>
+            {isRejected ? "Application Rejected" : "Awaiting Verification"}
+          </Text>
+          <Text style={[styles.pendingSub, { color: theme.textSecondary }]}>
+            {isRejected 
+              ? "Your certification documents were rejected by the administrator. Please contact support or register again with valid proofs."
+              : "An administrator is currently reviewing your medical degree and credentials. You will be activated on the emergency network once verified."}
+          </Text>
+          {!isRejected && (
+            <ActivityIndicator size="small" color={theme.primary} style={{ marginTop: 20 }} />
+          )}
         </View>
       ) : (
         <FlatList
@@ -392,5 +416,23 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 6,
     lineHeight: 18,
+  },
+  pendingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  pendingTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  pendingSub: {
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: 'center',
   },
 });

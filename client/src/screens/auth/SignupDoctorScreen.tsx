@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { 
   StyleSheet, 
   Text, 
@@ -12,12 +12,12 @@ import {
   Alert
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import * as DocumentPicker from 'expo-document-picker';
 import api from '../../services/api';
 import { ThemeContext } from '../../context/ThemeContext';
-import { useContext } from 'react';
 
 export default function SignupDoctorScreen() {
-  const [formData, setFormData] = useState({
+   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
     email: '',
@@ -25,9 +25,31 @@ export default function SignupDoctorScreen() {
     phone: '',
     qualifications: ''
   });
+  const [selectedDocs, setSelectedDocs] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const navigation = useNavigation<any>();
   const { theme } = useContext(ThemeContext);
+
+  const pickDocuments = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['application/pdf', 'image/*'],
+        multiple: true,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const newDocs = [...selectedDocs, ...result.assets].slice(0, 3);
+        setSelectedDocs(newDocs);
+      }
+    } catch (err) {
+      console.warn('Error picking document:', err);
+      Alert.alert('Error', 'Failed to pick document');
+    }
+  };
+
+  const removeDoc = (index: number) => {
+    setSelectedDocs(prev => prev.filter((_, i) => i !== index));
+  };
 
   const handleSignup = async () => {
     const { firstName, lastName, email, password, phone, qualifications } = formData;
@@ -35,18 +57,34 @@ export default function SignupDoctorScreen() {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
+    if (selectedDocs.length === 0) {
+      Alert.alert('Error', 'Please upload at least one degree certification or ID proof document.');
+      return;
+    }
 
     setLoading(true);
     try {
-      // In a real scenario, use FormData for file uploads
       const data = new FormData();
-      Object.keys(formData).forEach(key => {
-        data.append(key, (formData as any)[key]);
+      data.append('firstName', firstName);
+      data.append('lastName', lastName);
+      data.append('email', email);
+      data.append('password', password);
+      data.append('phone', phone);
+      data.append('qualifications', qualifications);
+
+      selectedDocs.forEach((doc) => {
+        data.append('docs', {
+          uri: doc.uri,
+          name: doc.name || 'document.pdf',
+          type: doc.mimeType || 'application/pdf',
+        } as any);
       });
-      
-      // Note: File picking logic would go here
-      // For now, we send JSON to the signup endpoint (which handles it)
-      await api.post('/auth/signup/doctor', formData);
+
+      await api.post('/auth/signup/doctor', data, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
       
       Alert.alert(
         'Application Submitted', 
@@ -141,12 +179,30 @@ export default function SignupDoctorScreen() {
           />
 
           <View style={styles.uploadBox}>
-            <Text style={{ color: theme.textSecondary, marginBottom: 10 }}>
-              * Document upload (ID/Degree) placeholder
+            <Text style={{ color: theme.textSecondary, marginBottom: 10, fontWeight: 'bold' }}>
+              Upload Degree Certifications / ID proof (Max 3)
             </Text>
-            <TouchableOpacity style={[styles.uploadButton, { borderColor: theme.secondary }]}>
-              <Text style={{ color: theme.secondary }}>Select Documents (Max 3)</Text>
+            <TouchableOpacity 
+              style={[styles.uploadButton, { borderColor: theme.secondary, backgroundColor: `${theme.secondary}12` }]}
+              onPress={pickDocuments}
+            >
+              <Text style={{ color: theme.secondary, fontWeight: 'bold' }}>Select Documents</Text>
             </TouchableOpacity>
+
+            {selectedDocs.length > 0 && (
+              <View style={styles.selectedFilesList}>
+                {selectedDocs.map((doc, idx) => (
+                  <View key={idx} style={[styles.selectedFileItem, { borderColor: theme.border }]}>
+                    <Text style={{ color: theme.text, flex: 0.9 }} numberOfLines={1}>
+                      {doc.name || `Document ${idx + 1}`}
+                    </Text>
+                    <TouchableOpacity onPress={() => removeDoc(idx)}>
+                      <Text style={{ color: theme.error, fontWeight: 'bold' }}>Remove</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            )}
           </View>
 
           <TouchableOpacity 
@@ -242,5 +298,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 25,
     marginBottom: 40,
+  },
+  selectedFilesList: {
+    width: '100%',
+    marginTop: 15,
+  },
+  selectedFileItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 12,
+    borderWidth: 1,
+    borderRadius: 8,
+    marginBottom: 8,
   },
 });

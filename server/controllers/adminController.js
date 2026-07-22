@@ -37,7 +37,7 @@ exports.getAdminStats = async (req, res) => {
 exports.getPendingDoctors = async (req, res) => {
   try {
     const doctorProfiles = await DoctorProfile.find()
-      .populate('userId', 'name email createdAt role')
+      .populate('userId', 'name email createdAt role isDeleted terminationReason')
       .sort({ createdAt: -1 });
 
     res.json(doctorProfiles);
@@ -67,8 +67,12 @@ exports.approveDoctor = async (req, res) => {
   try {
     const { userId } = req.params;
 
-    // 1. Update User role to DOCTOR
-    const user = await User.findByIdAndUpdate(userId, { role: 'DOCTOR' }, { new: true });
+    // 1. Update User role to DOCTOR and clear deleted status/reason
+    const user = await User.findByIdAndUpdate(userId, { 
+      role: 'DOCTOR',
+      isDeleted: false,
+      terminationReason: ''
+    }, { new: true });
     if (!user) return res.status(404).json({ message: 'User not found' });
 
     // 2. Update DoctorProfile docs status to APPROVED
@@ -98,6 +102,63 @@ exports.rejectDoctor = async (req, res) => {
     );
 
     res.json({ message: 'Doctor application rejected', profile, reason });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Terminate a doctor account
+// @route   POST /api/admin/doctors/:userId/terminate
+exports.terminateDoctor = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { reason } = req.body;
+
+    const user = await User.findByIdAndUpdate(userId, { 
+      isDeleted: true,
+      terminationReason: reason || 'Violation of platform guidelines'
+    }, { new: true });
+
+    if (!user) return res.status(404).json({ message: 'Doctor not found' });
+
+    // Mark as offline in profile
+    await DoctorProfile.findOneAndUpdate(
+      { userId },
+      { available: false, currentlyAssignedRequest: null }
+    );
+
+    res.json({ message: 'Doctor account terminated successfully', user });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Get reviews for a specific doctor
+// @route   GET /api/admin/doctors/:doctorId/reviews
+exports.getDoctorReviews = async (req, res) => {
+  try {
+    const { doctorId } = req.params;
+
+    const reviews = await Request.find({
+      acceptedBy: doctorId,
+      'rating.score': { $exists: true }
+    })
+    .select('rating createdAt userId')
+    .populate('userId', 'name')
+    .sort({ createdAt: -1 })
+    .limit(50); // Optimization: Limit to recent 50 reviews to minimize DB overhead
+
+    const formattedReviews = reviews.map(r => ({
+      _id: r._id,
+      score: r.rating.score,
+      review: r.rating.review || '',
+      createdAt: r.createdAt,
+      userName: r.userId?.name 
+        ? `${r.userId.name.first} ${r.userId.name.last}` 
+        : 'Anonymous Reporter'
+    }));
+
+    res.json(formattedReviews);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

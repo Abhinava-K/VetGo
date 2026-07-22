@@ -151,7 +151,8 @@ exports.login = async (req, res) => {
     console.log(`[AUTH] Login attempt for email: "${cleanEmail}"`);
 
     const user = await User.findOne({ email: cleanEmail });
-    if (!user || user.isDeleted) {
+    const isTerminatedDoctor = user && user.role === 'DOCTOR' && user.isDeleted && user.terminationReason;
+    if (!user || (user.isDeleted && !isTerminatedDoctor)) {
       console.log(`[AUTH] User not found or isDeleted for email: "${cleanEmail}"`);
       return res.status(401).json({ message: 'Invalid email or password' });
     }
