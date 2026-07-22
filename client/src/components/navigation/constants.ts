@@ -18,6 +18,8 @@ export const DEFAULT_TABS: TabConfig[] = [
   { name: 'Requests', label: 'Requests', icon: 'document-text-outline', activeIcon: 'document-text' },
   { name: 'Pets', label: 'Pets', icon: 'paw-outline', activeIcon: 'paw' },
   { name: 'Profile', label: 'Profile', icon: 'person-outline', activeIcon: 'person' },
+  { name: 'DoctorHome', label: 'Alerts', icon: 'alert-circle-outline', activeIcon: 'alert-circle' },
+  { name: 'DoctorHistory', label: 'History', icon: 'time-outline', activeIcon: 'time' },
 ];
 
 export const SPRING_CONFIG = {

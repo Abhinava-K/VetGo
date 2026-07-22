@@ -3,7 +3,7 @@ import { View, ActivityIndicator } from 'react-native';
 import { createStackNavigator } from '@react-navigation/stack';
 import AuthStack from './AuthStack';
 import MainTab from './MainTab';
-import DoctorHomeScreen from '../screens/doctor/DoctorHomeScreen';
+import DoctorTab from './DoctorTab';
 import AssignedRequestScreen from '../screens/doctor/AssignedRequestScreen';
 import CreateRequestScreen from '../screens/user/CreateRequestScreen';
 import RequestStatusScreen from '../screens/user/RequestStatusScreen';
@@ -34,7 +34,7 @@ export default function RootNavigator() {
         </>
       ) : user.role === 'DOCTOR' ? (
         <>
-          <Stack.Screen name="DoctorHome" component={DoctorHomeScreen} />
+          <Stack.Screen name="DoctorMain" component={DoctorTab} />
           <Stack.Screen name="AssignedRequest" component={AssignedRequestScreen} />
         </>
       ) : (
