@@ -179,7 +179,7 @@ export default function DoctorHomeScreen() {
         <View style={styles.statusRow}>
           <View style={styles.ratingBox}>
             <Ionicons name="star" size={16} color="#F59E0B" />
-            <Text style={[styles.ratingText, { color: theme.text }]}>
+            <Text style={[styles.ratingText, { color: '#1F2937' }]}>
               {ratingAvg} ({doctorProfile?.ratingCount || 0})
             </Text>
           </View>

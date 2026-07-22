@@ -157,16 +157,20 @@ export default function ProfileScreen() {
 
       {/* Stats Dashboard */}
       <View style={styles.statsRow}>
-        <View style={[styles.statCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-          <Ionicons name="paw-outline" size={24} color={theme.primary} />
-          <Text style={[styles.statValue, { color: theme.text }]}>{petCount}</Text>
-          <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Pets</Text>
-        </View>
+        {profile?.role !== 'DOCTOR' && (
+          <View style={[styles.statCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <Ionicons name="paw-outline" size={24} color={theme.primary} />
+            <Text style={[styles.statValue, { color: theme.text }]}>{petCount}</Text>
+            <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Pets</Text>
+          </View>
+        )}
 
         <View style={[styles.statCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <Ionicons name="shield-checkmark-outline" size={24} color={theme.secondary} />
           <Text style={[styles.statValue, { color: theme.text }]}>{requestCount}</Text>
-          <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Rescues</Text>
+          <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
+            {profile?.role === 'DOCTOR' ? 'Rescues' : 'Requests'}
+          </Text>
         </View>
 
         {profile?.role === 'DOCTOR' && (
@@ -245,11 +249,11 @@ export default function ProfileScreen() {
       </TouchableOpacity>
 
       <TouchableOpacity 
-        style={[styles.deleteBtn, { backgroundColor: 'rgba(239, 68, 68, 0.12)', borderColor: '#EF4444' }]}
+        style={[styles.deleteBtn, { backgroundColor: '#EF4444', borderColor: '#EF4444' }]}
         onPress={handleDeleteAccountPress}
       >
-        <Feather name="trash-2" size={20} color="#EF4444" style={{ marginRight: 10 }} />
-        <Text style={[styles.deleteText, { color: '#EF4444' }]}>Delete Account</Text>
+        <Feather name="trash-2" size={20} color="#FFFFFF" style={{ marginRight: 10 }} />
+        <Text style={[styles.deleteText, { color: '#FFFFFF' }]}>Delete Account</Text>
       </TouchableOpacity>
     </ScrollView>
   );
