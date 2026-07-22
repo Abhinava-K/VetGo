@@ -7,7 +7,7 @@ const { decryptField } = require('../middleware/encryption');
 // @route   POST /api/requests
 exports.createRequest = async (req, res) => {
   try {
-    const { description, location, petId, doctorId } = req.body;
+    const { description, location, petId, doctorId, animalCategory } = req.body;
     
     const isMockDoctor = typeof doctorId === 'string' && doctorId.startsWith('doc-');
 
@@ -21,6 +21,7 @@ exports.createRequest = async (req, res) => {
     const requestData = {
       userId: req.user.id,
       petId: petId || null,
+      animalCategory: animalCategory || (petId ? 'PET' : 'STRAY'),
       description,
       location: {
         type: 'Point',
@@ -161,30 +162,40 @@ exports.startRequest = async (req, res) => {
 // @route   POST /api/requests/:id/complete
 exports.completeRequest = async (req, res) => {
   try {
-    const { rating, review } = req.body;
+    const { rating, review, resolutionNotes } = req.body;
     const request = await RequestModel.findById(req.params.id);
 
     if (!request) {
       return res.status(404).json({ message: 'Request not found' });
     }
 
-    if (request.userId.toString() !== req.user.id) {
+    const isRequester = request.userId && request.userId.toString() === req.user.id;
+    const isDoctor = request.acceptedBy && request.acceptedBy.toString() === req.user.id;
+
+    if (!isRequester && !isDoctor) {
       return res.status(403).json({ message: 'Not authorized to complete this request' });
     }
 
     request.status = 'COMPLETED';
     request.completedAt = Date.now();
-    request.rating = { score: rating, review };
+    if (resolutionNotes) {
+      request.resolutionNotes = resolutionNotes;
+    }
+    if (rating) {
+      request.rating = { score: rating, review: review || '' };
+    }
     await request.save();
 
-    const doctorProfile = await DoctorProfile.findOne({ userId: request.acceptedBy });
-    if (doctorProfile) {
-      const totalScore = (doctorProfile.ratingAvg * doctorProfile.ratingCount) + rating;
-      doctorProfile.ratingCount += 1;
-      doctorProfile.ratingAvg = totalScore / doctorProfile.ratingCount;
-      doctorProfile.currentlyAssignedRequest = null;
-      doctorProfile.available = true;
-      await doctorProfile.save();
+    if (rating && request.acceptedBy) {
+      const doctorProfile = await DoctorProfile.findOne({ userId: request.acceptedBy });
+      if (doctorProfile) {
+        const totalScore = (doctorProfile.ratingAvg * doctorProfile.ratingCount) + rating;
+        doctorProfile.ratingCount += 1;
+        doctorProfile.ratingAvg = totalScore / doctorProfile.ratingCount;
+        doctorProfile.currentlyAssignedRequest = null;
+        doctorProfile.available = true;
+        await doctorProfile.save();
+      }
     }
 
     const io = req.app.get('io');
@@ -250,10 +261,13 @@ exports.getRequestById = async (req, res) => {
     const reqObj = request.toObject();
 
     // If requester or accepted doctor is viewing, include decrypted phone
-    if (req.user.role === 'DOCTOR' && request.acceptedBy && request.acceptedBy._id.toString() === req.user.id) {
-      reqObj.userPhone = request.userId.phoneEncrypted ? decryptField(request.userId.phoneEncrypted) : null;
-    } else if (req.user.id === request.userId._id.toString() && request.acceptedBy) {
-      reqObj.doctorPhone = request.acceptedBy.phoneEncrypted ? decryptField(request.acceptedBy.phoneEncrypted) : null;
+    const isUserOwner = request.userId && request.userId._id && req.user.id === request.userId._id.toString();
+    const isAcceptedDoctor = req.user.role === 'DOCTOR' && request.acceptedBy && request.acceptedBy._id.toString() === req.user.id;
+
+    if (isAcceptedDoctor) {
+      reqObj.userPhone = request.userId && request.userId.phoneEncrypted ? decryptField(request.userId.phoneEncrypted) : null;
+    } else if (isUserOwner && request.acceptedBy) {
+      reqObj.doctorPhone = request.acceptedBy && request.acceptedBy.phoneEncrypted ? decryptField(request.acceptedBy.phoneEncrypted) : null;
     }
 
     res.json(reqObj);

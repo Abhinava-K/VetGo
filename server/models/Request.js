@@ -10,6 +10,15 @@ const requestSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Pet'
   },
+  animalCategory: {
+    type: String,
+    enum: ['PET', 'STRAY'],
+    default: 'PET'
+  },
+  resolutionNotes: {
+    type: String,
+    default: ''
+  },
   description: {
     type: String,
     required: true,

@@ -68,9 +68,46 @@ exports.signupDoctor = async (req, res) => {
   try {
     const { firstName, lastName, email, password, phone, qualifications } = req.body;
 
-    const userExists = await User.findOne({ email });
-    if (userExists) {
-      return res.status(400).json({ message: 'User already exists' });
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      if (existingUser.isDeleted && existingUser.role === 'DOCTOR') {
+        // Reactivate soft-deleted doctor account
+        existingUser.isDeleted = false;
+        existingUser.name = { first: firstName, last: lastName };
+        existingUser.passwordHash = password; // pre-save hook hashes it
+        existingUser.phoneEncrypted = encryptField(phone);
+        await existingUser.save();
+
+        // Update or re-create DoctorProfile
+        let doctorProfile = await DoctorProfile.findOne({ userId: existingUser._id });
+        if (doctorProfile) {
+          doctorProfile.qualifications = qualifications;
+          doctorProfile.available = false; // set false until approved
+          doctorProfile.docs = req.files ? req.files.map(file => ({
+            filename: file.filename,
+            filepath: file.path,
+            status: 'PENDING'
+          })) : [];
+          await doctorProfile.save();
+        } else {
+          await DoctorProfile.create({
+            userId: existingUser._id,
+            qualifications,
+            docs: req.files ? req.files.map(file => ({
+              filename: file.filename,
+              filepath: file.path,
+              status: 'PENDING'
+            })) : []
+          });
+        }
+
+        return res.status(200).json({
+          message: 'Account reactivated successfully. Your application is pending admin review.',
+          userId: existingUser._id
+        });
+      } else {
+        return res.status(400).json({ message: 'User already exists' });
+      }
     }
 
     const phoneEncrypted = encryptField(phone);
@@ -114,8 +151,8 @@ exports.login = async (req, res) => {
     console.log(`[AUTH] Login attempt for email: "${cleanEmail}"`);
 
     const user = await User.findOne({ email: cleanEmail });
-    if (!user) {
-      console.log(`[AUTH] User not found for email: "${cleanEmail}"`);
+    if (!user || user.isDeleted) {
+      console.log(`[AUTH] User not found or isDeleted for email: "${cleanEmail}"`);
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
@@ -243,33 +280,41 @@ exports.deleteAccount = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    // 1. Anonymize user's emergency requests (unlink userId)
-    await RequestModel.updateMany(
-      { userId },
-      { $set: { userId: null } }
-    );
-
-    // 2. Find user
+    // Find user
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // 3. Delete user's registered pets
-    await Pet.deleteMany({ ownerId: userId });
-
-    // 4. Delete doctor profile if user was a doctor
     if (user.role === 'DOCTOR') {
-      await DoctorProfile.deleteOne({ userId });
+      // Soft Delete Doctor
+      user.isDeleted = true;
+      await user.save();
+
+      // Deactivate doctor availability
+      await DoctorProfile.findOneAndUpdate(
+        { userId },
+        { available: false, currentlyAssignedRequest: null }
+      );
+    } else {
+      // Hard Delete Normal User
+      // 1. Anonymize user's emergency requests (unlink userId)
+      await RequestModel.updateMany(
+        { userId },
+        { $set: { userId: null } }
+      );
+
+      // 2. Delete user's registered pets
+      await Pet.deleteMany({ ownerId: userId });
+
+      // 3. Delete user account
+      await User.findByIdAndDelete(userId);
     }
 
-    // 5. Delete user account
-    await User.findByIdAndDelete(userId);
-
-    // 6. Clear cookie
+    // Clear refresh cookie
     res.clearCookie('refreshToken');
 
-    res.json({ message: 'Account and personal data deleted successfully.' });
+    res.json({ message: 'Account and personal data processed successfully.' });
   } catch (error) {
     console.error('[AUTH] Delete account error:', error);
     res.status(500).json({ message: error.message });

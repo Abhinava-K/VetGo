@@ -7,6 +7,10 @@ const userSchema = new mongoose.Schema({
     enum: ['USER', 'DOCTOR', 'ADMIN'],
     default: 'USER'
   },
+  isDeleted: {
+    type: Boolean,
+    default: false
+  },
   name: {
     first: { type: String, required: true },
     last: { type: String, required: true }

@@ -17,6 +17,7 @@ import { getSocket } from '../../services/socket';
 
 export default function CreateRequestScreen() {
   const [description, setDescription] = useState('');
+  const [animalCategory, setAnimalCategory] = useState<'PET' | 'STRAY'>('STRAY');
   const [petId, setPetId] = useState<string | undefined>(undefined);
   const [pets, setPets] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -37,6 +38,9 @@ export default function CreateRequestScreen() {
     try {
       const { data } = await api.get('/pets'); // Need to implement this endpoint
       setPets(data);
+      if (data && data.length > 0) {
+        setAnimalCategory('PET');
+      }
     } catch (error) {
       console.error('Error fetching pets:', error);
     } finally {
@@ -55,7 +59,8 @@ export default function CreateRequestScreen() {
       const { data } = await api.post('/requests', {
         description,
         location,
-        petId,
+        petId: animalCategory === 'PET' ? petId : undefined,
+        animalCategory,
         doctorId
       });
 
@@ -99,28 +104,64 @@ export default function CreateRequestScreen() {
           {description.length}/400
         </Text>
 
-        <Text style={[styles.label, { color: theme.text, marginTop: 20 }]}>Select Pet (Optional)</Text>
-        {fetchingPets ? (
-          <ActivityIndicator color={theme.primary} />
-        ) : (
-          <View style={styles.petList}>
-            {pets.map(pet => (
-              <TouchableOpacity 
-                key={pet._id}
-                style={[
-                  styles.petCard, 
-                  { backgroundColor: theme.surface, borderColor: petId === pet._id ? theme.primary : theme.border }
-                ]}
-                onPress={() => setPetId(petId === pet._id ? undefined : pet._id)}
-              >
-                <Text style={{ color: theme.text }}>{pet.name}</Text>
-                <Text style={{ color: theme.textSecondary, fontSize: 12 }}>{pet.species}</Text>
-              </TouchableOpacity>
-            ))}
-            {pets.length === 0 && (
-              <Text style={{ color: theme.textSecondary }}>No pets found. You can add one later.</Text>
+        <Text style={[styles.label, { color: theme.text, marginTop: 20 }]}>Who is this emergency for?</Text>
+        <View style={styles.categoryRow}>
+          <TouchableOpacity 
+            style={[
+              styles.categoryBtn, 
+              { 
+                backgroundColor: animalCategory === 'PET' ? theme.primary : theme.surface, 
+                borderColor: animalCategory === 'PET' ? theme.primary : theme.border 
+              }
+            ]}
+            onPress={() => setAnimalCategory('PET')}
+          >
+            <Text style={{ color: animalCategory === 'PET' ? '#FFF' : theme.text, fontWeight: 'bold' }}>Owned Pet</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[
+              styles.categoryBtn, 
+              { 
+                backgroundColor: animalCategory === 'STRAY' ? theme.primary : theme.surface, 
+                borderColor: animalCategory === 'STRAY' ? theme.primary : theme.border 
+              }
+            ]}
+            onPress={() => {
+              setAnimalCategory('STRAY');
+              setPetId(undefined);
+            }}
+          >
+            <Text style={{ color: animalCategory === 'STRAY' ? '#FFF' : theme.text, fontWeight: 'bold' }}>Stray / Street Animal</Text>
+          </TouchableOpacity>
+        </View>
+
+        {animalCategory === 'PET' && (
+          <>
+            <Text style={[styles.label, { color: theme.text, marginTop: 20 }]}>Select Pet (Optional)</Text>
+            {fetchingPets ? (
+              <ActivityIndicator color={theme.primary} />
+            ) : (
+              <View style={styles.petList}>
+                {pets.map(pet => (
+                  <TouchableOpacity 
+                    key={pet._id}
+                    style={[
+                      styles.petCard, 
+                      { backgroundColor: theme.surface, borderColor: petId === pet._id ? theme.primary : theme.border }
+                    ]}
+                    onPress={() => setPetId(petId === pet._id ? undefined : pet._id)}
+                  >
+                    <Text style={{ color: theme.text }}>{pet.name}</Text>
+                    <Text style={{ color: theme.textSecondary, fontSize: 12 }}>{pet.species}</Text>
+                  </TouchableOpacity>
+                ))}
+                {pets.length === 0 && (
+                  <Text style={{ color: theme.textSecondary, marginTop: 5 }}>No pets found. You can add one later.</Text>
+                )}
+              </View>
             )}
-          </View>
+          </>
         )}
 
         <TouchableOpacity 
@@ -187,5 +228,20 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 18,
     fontWeight: 'bold',
-  }
+  },
+  categoryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 5,
+    marginBottom: 15,
+  },
+  categoryBtn: {
+    flex: 1,
+    height: 48,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginHorizontal: 5,
+  },
 });
