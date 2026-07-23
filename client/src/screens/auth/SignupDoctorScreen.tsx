@@ -72,11 +72,21 @@ export default function SignupDoctorScreen() {
       data.append('phone', phone);
       data.append('qualifications', qualifications);
 
-      selectedDocs.forEach((doc) => {
+      selectedDocs.forEach((doc, idx) => {
+        let name = doc.name || `document_${idx + 1}`;
+        const mimeType = doc.mimeType || 'image/jpeg';
+        if (!name.includes('.')) {
+          let ext = 'jpg';
+          if (mimeType === 'application/pdf') ext = 'pdf';
+          else if (mimeType.includes('png')) ext = 'png';
+          else if (mimeType.includes('webp')) ext = 'webp';
+          else if (mimeType.includes('word')) ext = 'docx';
+          name = `${name}.${ext}`;
+        }
         data.append('docs', {
           uri: doc.uri,
-          name: doc.name || 'document.pdf',
-          type: doc.mimeType || 'application/pdf',
+          name: name,
+          type: mimeType,
         } as any);
       });
 

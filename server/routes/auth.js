@@ -27,17 +27,34 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+    let ext = path.extname(file.originalname).toLowerCase();
+    if (!ext) {
+      if (file.mimetype === 'image/jpeg' || file.mimetype === 'image/jpg') ext = '.jpg';
+      else if (file.mimetype === 'image/png') ext = '.png';
+      else if (file.mimetype === 'image/webp') ext = '.webp';
+      else if (file.mimetype === 'image/heic') ext = '.heic';
+      else if (file.mimetype === 'image/gif') ext = '.gif';
+      else if (file.mimetype === 'application/pdf') ext = '.pdf';
+      else if (file.mimetype === 'application/msword') ext = '.doc';
+      else if (file.mimetype.includes('wordprocessingml')) ext = '.docx';
+      else ext = '.jpg';
+    }
+    cb(null, file.fieldname + '-' + uniqueSuffix + ext);
   }
 });
 
 const upload = multer({ 
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
   fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|pdf|doc|docx/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    if (extname) {
+    const allowedExts = /jpeg|jpg|png|gif|webp|heic|heif|pdf|doc|docx/;
+    const allowedMimeTypes = /image\/(jpeg|png|gif|webp|heic|heif|jpg)|application\/pdf|application\/msword|application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.document|application\/octet-stream/;
+
+    const extname = path.extname(file.originalname).toLowerCase().replace('.', '');
+    const extValid = allowedExts.test(extname);
+    const mimeValid = allowedMimeTypes.test(file.mimetype);
+
+    if (extValid || mimeValid || !file.originalname) {
       return cb(null, true);
     }
     cb(new Error('Only images, PDFs and Word docs are allowed'));
