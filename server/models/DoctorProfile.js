@@ -47,5 +47,8 @@ const doctorProfileSchema = new mongoose.Schema({
   timestamps: true
 });
 
+doctorProfileSchema.index({ ratingAvg: -1, isVerified: 1 });
+doctorProfileSchema.index({ isVerified: 1 });
+
 const DoctorProfile = mongoose.model('DoctorProfile', doctorProfileSchema);
 module.exports = DoctorProfile;

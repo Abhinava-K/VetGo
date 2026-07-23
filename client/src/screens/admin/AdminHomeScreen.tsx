@@ -32,6 +32,14 @@ export default function AdminHomeScreen() {
   const [applications, setApplications] = useState<any[]>([]);
   const [requests, setRequests] = useState<any[]>([]);
 
+  // Search & Filter State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const [ratingFilter, setRatingFilter] = useState<'all' | 'above_4_5' | 'above_4' | 'below_3_5' | 'below_2_5' | 'custom' | 'terminated'>('all');
+  const [customRatingValue, setCustomRatingValue] = useState('4.0');
+  const [customRatingDir, setCustomRatingDir] = useState<'above' | 'below'>('above');
+  const [searchLoading, setSearchLoading] = useState(false);
+
   // Termination Modal State
   const [terminationModalVisible, setTerminationModalVisible] = useState(false);
   const [selectedDoctorId, setSelectedDoctorId] = useState<string | null>(null);
@@ -52,6 +60,65 @@ export default function AdminHomeScreen() {
   useEffect(() => {
     loadAdminData();
   }, []);
+
+  // Debounce search query input (350ms)
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+    }, 350);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
+
+  const fetchDoctors = async (query: string, filter: string, customVal: string, customDir: string) => {
+    setSearchLoading(true);
+    try {
+      let minRating: number | undefined;
+      let maxRating: number | undefined;
+      let status: string | undefined;
+
+      if (filter === 'terminated') {
+        status = 'terminated';
+      } else if (filter === 'above_4_5') {
+        minRating = 4.5;
+      } else if (filter === 'above_4') {
+        minRating = 4.0;
+      } else if (filter === 'below_3_5') {
+        maxRating = 3.5;
+      } else if (filter === 'below_2_5') {
+        maxRating = 2.5;
+      } else if (filter === 'custom') {
+        const val = parseFloat(customVal);
+        if (!isNaN(val)) {
+          if (customDir === 'above') minRating = val;
+          else maxRating = val;
+        }
+      }
+
+      const params: any = {};
+      if (query.trim()) params.q = query.trim();
+      if (minRating !== undefined) params.minRating = minRating;
+      if (maxRating !== undefined) params.maxRating = maxRating;
+      if (status !== undefined) params.status = status;
+
+      if (Object.keys(params).length > 0) {
+        const { data } = await api.get('/admin/doctors/search', { params });
+        setApplications(data.doctors || []);
+      } else {
+        const { data } = await api.get('/admin/doctor-applications');
+        setApplications(data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching doctors:', error);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!loading) {
+      fetchDoctors(debouncedQuery, ratingFilter, customRatingValue, customRatingDir);
+    }
+  }, [debouncedQuery, ratingFilter, customRatingValue, customRatingDir]);
 
   const loadAdminData = async () => {
     try {
@@ -75,6 +142,9 @@ export default function AdminHomeScreen() {
   const onRefresh = () => {
     setRefreshing(true);
     loadAdminData();
+    if (debouncedQuery || ratingFilter !== 'all') {
+      fetchDoctors(debouncedQuery, ratingFilter, customRatingValue, customRatingDir);
+    }
   };
 
   const handleApproveDoctor = async (userId: string, name: string) => {
@@ -384,8 +454,13 @@ export default function AdminHomeScreen() {
     }
   };
 
-  const pendingApps = applications.filter(app => !app.isVerified && !app.userId?.isDeleted);
-  const verifiedVets = applications.filter(app => app.isVerified || app.userId?.isDeleted);
+  const pendingApps = ratingFilter === 'terminated' 
+    ? [] 
+    : applications.filter(app => !app.isVerified && !app.userId?.isDeleted);
+
+  const verifiedVets = ratingFilter === 'terminated'
+    ? applications.filter(app => app.userId?.isDeleted === true)
+    : applications.filter(app => app.isVerified && !app.userId?.isDeleted);
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -486,6 +561,120 @@ export default function AdminHomeScreen() {
                 Verified Doctors ({verifiedVets.length})
               </Text>
             </TouchableOpacity>
+          </View>
+
+          {/* Search Bar & Rating Filter Chips */}
+          <View style={[styles.searchFilterContainer, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            {/* Search Input Bar */}
+            <View style={[styles.searchBar, { backgroundColor: theme.background, borderColor: theme.border }]}>
+              <Ionicons name="search-outline" size={18} color={theme.textSecondary} style={{ marginRight: 8 }} />
+              <TextInput
+                style={[styles.searchInput, { color: theme.text }]}
+                placeholder="Search doctor by name, email, or qualification..."
+                placeholderTextColor={theme.textSecondary}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchQuery('')} style={{ padding: 4 }}>
+                  <Ionicons name="close-circle" size={18} color={theme.textSecondary} />
+                </TouchableOpacity>
+              )}
+              {searchLoading && <ActivityIndicator size="small" color="#6366F1" style={{ marginLeft: 6 }} />}
+            </View>
+
+            {/* Rating Filter Chips */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsScroll}>
+              <TouchableOpacity
+                style={[styles.chip, ratingFilter === 'all' && styles.chipActive]}
+                onPress={() => setRatingFilter('all')}
+              >
+                <Text style={[styles.chipText, ratingFilter === 'all' && styles.chipTextActive]}>All Ratings</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.chip, ratingFilter === 'above_4_5' && styles.chipActive]}
+                onPress={() => setRatingFilter('above_4_5')}
+              >
+                <Ionicons name="star" size={12} color={ratingFilter === 'above_4_5' ? '#FFF' : '#F59E0B'} style={{ marginRight: 4 }} />
+                <Text style={[styles.chipText, ratingFilter === 'above_4_5' && styles.chipTextActive]}>Above ★ 4.5</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.chip, ratingFilter === 'above_4' && styles.chipActive]}
+                onPress={() => setRatingFilter('above_4')}
+              >
+                <Ionicons name="star" size={12} color={ratingFilter === 'above_4' ? '#FFF' : '#F59E0B'} style={{ marginRight: 4 }} />
+                <Text style={[styles.chipText, ratingFilter === 'above_4' && styles.chipTextActive]}>Above ★ 4.0</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.chip, ratingFilter === 'below_3_5' && styles.chipActiveBelow]}
+                onPress={() => setRatingFilter('below_3_5')}
+              >
+                <Ionicons name="arrow-down-circle-outline" size={12} color={ratingFilter === 'below_3_5' ? '#FFF' : '#EF4444'} style={{ marginRight: 4 }} />
+                <Text style={[styles.chipText, ratingFilter === 'below_3_5' && styles.chipTextActive]}>Below ★ 3.5</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.chip, ratingFilter === 'below_2_5' && styles.chipActiveBelow]}
+                onPress={() => setRatingFilter('below_2_5')}
+              >
+                <Ionicons name="warning-outline" size={12} color={ratingFilter === 'below_2_5' ? '#FFF' : '#EF4444'} style={{ marginRight: 4 }} />
+                <Text style={[styles.chipText, ratingFilter === 'below_2_5' && styles.chipTextActive]}>Below ★ 2.5</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.chip, ratingFilter === 'custom' && styles.chipActiveCustom]}
+                onPress={() => setRatingFilter('custom')}
+              >
+                <Ionicons name="options-outline" size={12} color={ratingFilter === 'custom' ? '#FFF' : '#8B5CF6'} style={{ marginRight: 4 }} />
+                <Text style={[styles.chipText, ratingFilter === 'custom' && styles.chipTextActive]}>Custom Threshold</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.chip, ratingFilter === 'terminated' && styles.chipActiveTerminated]}
+                onPress={() => {
+                  setRatingFilter('terminated');
+                  setDocSubTab('verified');
+                }}
+              >
+                <Ionicons name="ban-outline" size={12} color={ratingFilter === 'terminated' ? '#FFF' : '#EF4444'} style={{ marginRight: 4 }} />
+                <Text style={[styles.chipText, ratingFilter === 'terminated' && styles.chipTextActive]}>Terminated Accounts</Text>
+              </TouchableOpacity>
+            </ScrollView>
+
+            {/* Dynamic Custom Rating Input Row */}
+            {ratingFilter === 'custom' && (
+              <View style={[styles.customRatingContainer, { backgroundColor: theme.background, borderColor: theme.border }]}>
+                <Text style={[styles.customRatingLabel, { color: theme.textSecondary }]}>Direction:</Text>
+                <View style={styles.dirToggleRow}>
+                  <TouchableOpacity
+                    style={[styles.dirBtn, customRatingDir === 'above' && styles.dirBtnActiveAbove]}
+                    onPress={() => setCustomRatingDir('above')}
+                  >
+                    <Text style={[styles.dirBtnText, customRatingDir === 'above' && styles.dirBtnTextActive]}>≥ Above</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.dirBtn, customRatingDir === 'below' && styles.dirBtnActiveBelow]}
+                    onPress={() => setCustomRatingDir('below')}
+                  >
+                    <Text style={[styles.dirBtnText, customRatingDir === 'below' && styles.dirBtnTextActive]}>≤ Below</Text>
+                  </TouchableOpacity>
+                </View>
+
+                <Text style={[styles.customRatingLabel, { color: theme.textSecondary, marginLeft: 12 }]}>Rating:</Text>
+                <TextInput
+                  style={[styles.customRatingInput, { backgroundColor: theme.surface, color: theme.text, borderColor: theme.border }]}
+                  keyboardType="numeric"
+                  placeholder="e.g. 4.2"
+                  placeholderTextColor={theme.textSecondary}
+                  value={customRatingValue}
+                  onChangeText={setCustomRatingValue}
+                  maxLength={4}
+                />
+              </View>
+            )}
           </View>
 
           {docSubTab === 'pending' ? (
@@ -1053,5 +1242,115 @@ const styles = StyleSheet.create({
   modalReviewComment: {
     fontSize: 13,
     fontStyle: 'italic',
+  },
+  searchFilterContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    height: 42,
+    marginBottom: 10,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    paddingVertical: 0,
+  },
+  chipsScroll: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingBottom: 4,
+  },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    marginRight: 8,
+    backgroundColor: 'transparent',
+  },
+  chipActive: {
+    backgroundColor: '#6366F1',
+    borderColor: '#6366F1',
+  },
+  chipActiveBelow: {
+    backgroundColor: '#EF4444',
+    borderColor: '#EF4444',
+  },
+  chipActiveCustom: {
+    backgroundColor: '#8B5CF6',
+    borderColor: '#8B5CF6',
+  },
+  chipActiveTerminated: {
+    backgroundColor: '#991B1B',
+    borderColor: '#991B1B',
+  },
+  chipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  chipTextActive: {
+    color: '#FFFFFF',
+  },
+  customRatingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    padding: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  customRatingLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginRight: 6,
+  },
+  dirToggleRow: {
+    flexDirection: 'row',
+    borderRadius: 6,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  dirBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: 'transparent',
+  },
+  dirBtnActiveAbove: {
+    backgroundColor: '#6366F1',
+  },
+  dirBtnActiveBelow: {
+    backgroundColor: '#EF4444',
+  },
+  dirBtnText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  dirBtnTextActive: {
+    color: '#FFFFFF',
+  },
+  customRatingInput: {
+    width: 60,
+    height: 32,
+    borderRadius: 6,
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    fontSize: 12,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginLeft: 6,
   },
 });

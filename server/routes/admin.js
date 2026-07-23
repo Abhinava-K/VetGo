@@ -7,7 +7,8 @@ const {
   approveDoctor, 
   rejectDoctor,
   terminateDoctor,
-  getDoctorReviews
+  getDoctorReviews,
+  searchDoctors
 } = require('../controllers/adminController');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -15,6 +16,7 @@ const { protect, authorize } = require('../middleware/auth');
 router.use(protect, authorize('ADMIN'));
 
 router.get('/stats', getAdminStats);
+router.get('/doctors/search', searchDoctors);
 router.get('/doctor-applications', getPendingDoctors);
 router.get('/requests', getAllRequests);
 router.post('/doctor-applications/:userId/approve', approveDoctor);

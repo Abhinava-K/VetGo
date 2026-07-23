@@ -168,3 +168,89 @@ exports.getDoctorReviews = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// @desc    Search and filter doctors with rating bounds and keywords
+// @route   GET /api/admin/doctors/search
+exports.searchDoctors = async (req, res) => {
+  try {
+    const { q, minRating, maxRating, status, page = 1, limit = 50 } = req.query;
+
+    let doctorMatch = {};
+
+    if (minRating !== undefined && minRating !== '') {
+      doctorMatch.ratingAvg = { ...doctorMatch.ratingAvg, $gte: parseFloat(minRating) };
+    }
+    if (maxRating !== undefined && maxRating !== '') {
+      doctorMatch.ratingAvg = { ...doctorMatch.ratingAvg, $lte: parseFloat(maxRating) };
+    }
+    if (status === 'verified') {
+      doctorMatch.isVerified = true;
+    } else if (status === 'pending') {
+      doctorMatch.isVerified = false;
+    }
+
+    const pipeline = [
+      { $match: doctorMatch },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'userId',
+          foreignField: '_id',
+          as: 'userId'
+        }
+      },
+      { $unwind: '$userId' }
+    ];
+
+    let postLookupMatch = {};
+
+    if (status === 'terminated') {
+      postLookupMatch['userId.isDeleted'] = true;
+    } else {
+      postLookupMatch['userId.isDeleted'] = { $ne: true };
+    }
+
+    if (q && q.trim()) {
+      const regex = new RegExp(q.trim(), 'i');
+      postLookupMatch.$or = [
+        { 'userId.name.first': regex },
+        { 'userId.name.last': regex },
+        { 'userId.email': regex },
+        { qualifications: regex }
+      ];
+    }
+
+    if (Object.keys(postLookupMatch).length > 0) {
+      pipeline.push({ $match: postLookupMatch });
+    }
+
+    // Sort by ratingAvg descending, then createdAt descending
+    pipeline.push({ $sort: { ratingAvg: -1, createdAt: -1 } });
+
+    // Count & Paginate using $facet
+    const pageNum = parseInt(page) || 1;
+    const limitNum = parseInt(limit) || 50;
+    const skipNum = (pageNum - 1) * limitNum;
+
+    pipeline.push({
+      $facet: {
+        data: [{ $skip: skipNum }, { $limit: limitNum }],
+        totalCount: [{ $count: 'count' }]
+      }
+    });
+
+    const result = await DoctorProfile.aggregate(pipeline);
+    const doctors = result[0]?.data || [];
+    const total = result[0]?.totalCount[0]?.count || 0;
+
+    res.json({
+      doctors,
+      total,
+      page: pageNum,
+      totalPages: Math.ceil(total / limitNum)
+    });
+  } catch (error) {
+    console.error('Error searching doctors:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
