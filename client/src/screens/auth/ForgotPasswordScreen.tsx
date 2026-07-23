@@ -101,7 +101,7 @@ export default function ForgotPasswordScreen() {
                 borderColor: theme.border,
               },
             ]}
-            placeholder="admin@vetgo.com"
+            placeholder="your.email@example.com"
             placeholderTextColor={theme.textSecondary}
             value={email}
             onChangeText={setEmail}

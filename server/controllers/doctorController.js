@@ -6,7 +6,7 @@ const { decryptField } = require('../middleware/encryption');
 // @route   GET /api/doctors/profile
 exports.getDoctorProfile = async (req, res) => {
   try {
-    const profile = await DoctorProfile.findOne({ userId: req.user.id }).populate('userId', 'name email phoneEncrypted');
+    const profile = await DoctorProfile.findOne({ userId: req.user.id }).populate('userId', 'name email phoneEncrypted isDeleted terminationReason');
     if (!profile) return res.status(404).json({ message: 'Profile not found' });
     
     const userObj = profile.userId ? profile.userId.toObject() : {};
@@ -18,7 +18,9 @@ exports.getDoctorProfile = async (req, res) => {
         _id: userObj._id,
         name: userObj.name,
         email: userObj.email,
-        phone
+        phone,
+        isDeleted: userObj.isDeleted,
+        terminationReason: userObj.terminationReason
       }
     });
   } catch (error) {

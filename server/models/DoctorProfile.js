@@ -38,6 +38,10 @@ const doctorProfileSchema = new mongoose.Schema({
   available: {
     type: Boolean,
     default: true
+  },
+  isVerified: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true

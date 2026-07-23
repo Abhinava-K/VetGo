@@ -46,10 +46,11 @@ export default function DoctorTab() {
   }
 
   // Verification checks
-  const isApproved = profile?.docs && profile.docs.length > 0 && profile.docs.every((d: any) => d.status === 'APPROVED');
+  const userDetails = profile?.user || profile?.userId;
+  const isApproved = profile?.isVerified === true || (profile?.docs && profile.docs.length > 0 && profile.docs.every((d: any) => d.status === 'APPROVED'));
   const isRejected = profile?.docs && profile.docs.some((d: any) => d.status === 'REJECTED');
-  const isTerminated = profile?.userId?.isDeleted === true;
-  const terminationReason = profile?.userId?.terminationReason || '';
+  const isTerminated = userDetails?.isDeleted === true;
+  const terminationReason = userDetails?.terminationReason || '';
 
   if (!isApproved || isTerminated) {
     let iconName = 'time-outline';

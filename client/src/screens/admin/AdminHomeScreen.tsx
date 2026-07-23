@@ -148,8 +148,9 @@ export default function AdminHomeScreen() {
       : 'Doctor Candidate';
 
     const doctorEmail = item.userId?.email || 'N/A';
-    const isPending = item.docs && item.docs.some((d: any) => d.status === 'PENDING');
-    const isApproved = item.docs && item.docs.every((d: any) => d.status === 'APPROVED');
+    const isApproved = item.isVerified === true;
+    const isRejected = item.docs && item.docs.some((d: any) => d.status === 'REJECTED');
+    const isPending = !isApproved && !isRejected;
 
     return (
       <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
@@ -217,7 +218,7 @@ export default function AdminHomeScreen() {
           </View>
         )}
 
-        {isPending && item.userId?._id && (
+        {!isApproved && item.userId?._id && (
           <View style={styles.actionColumn}>
             <View style={{ marginBottom: 8, marginTop: 14 }}>
               <SlideButton 
@@ -383,8 +384,8 @@ export default function AdminHomeScreen() {
     }
   };
 
-  const pendingApps = applications.filter(app => app.docs && app.docs.some((d: any) => d.status === 'PENDING'));
-  const verifiedVets = applications.filter(app => app.docs && app.docs.every((d: any) => d.status === 'APPROVED'));
+  const pendingApps = applications.filter(app => !app.isVerified && !app.userId?.isDeleted);
+  const verifiedVets = applications.filter(app => app.isVerified || app.userId?.isDeleted);
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -422,7 +423,7 @@ export default function AdminHomeScreen() {
                 { color: activeTab === 'applications' ? '#6366F1' : theme.textSecondary },
               ]}
             >
-              Vets Control ({applications.length})
+              Vets Control
             </Text>
           </TouchableOpacity>
 
@@ -436,7 +437,7 @@ export default function AdminHomeScreen() {
                 { color: activeTab === 'requests' ? '#6366F1' : theme.textSecondary },
               ]}
             >
-              Emergency Feed ({requests.length})
+              Emergency Feed
             </Text>
           </TouchableOpacity>
 

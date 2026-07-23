@@ -75,12 +75,17 @@ exports.approveDoctor = async (req, res) => {
     }, { new: true });
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    // 2. Update DoctorProfile docs status to APPROVED
-    const profile = await DoctorProfile.findOneAndUpdate(
-      { userId },
-      { $set: { 'docs.$[].status': 'APPROVED' } },
-      { new: true }
-    );
+    // 2. Update DoctorProfile docs status to APPROVED and isVerified to true
+    let profile = await DoctorProfile.findOne({ userId });
+    if (profile) {
+      profile.isVerified = true;
+      if (!profile.docs || profile.docs.length === 0) {
+        profile.docs = [{ filename: 'admin_verified', filepath: 'system', status: 'APPROVED' }];
+      } else {
+        profile.docs.forEach(d => { d.status = 'APPROVED'; });
+      }
+      await profile.save();
+    }
 
     res.json({ message: 'Doctor approved successfully', user, profile });
   } catch (error) {
@@ -97,7 +102,7 @@ exports.rejectDoctor = async (req, res) => {
 
     const profile = await DoctorProfile.findOneAndUpdate(
       { userId },
-      { $set: { 'docs.$[].status': 'REJECTED' } },
+      { $set: { isVerified: false, 'docs.$[].status': 'REJECTED' } },
       { new: true }
     );
 
@@ -121,10 +126,10 @@ exports.terminateDoctor = async (req, res) => {
 
     if (!user) return res.status(404).json({ message: 'Doctor not found' });
 
-    // Mark as offline in profile
+    // Mark as offline & unverified in profile
     await DoctorProfile.findOneAndUpdate(
       { userId },
-      { available: false, currentlyAssignedRequest: null }
+      { isVerified: false, available: false, currentlyAssignedRequest: null }
     );
 
     res.json({ message: 'Doctor account terminated successfully', user });
