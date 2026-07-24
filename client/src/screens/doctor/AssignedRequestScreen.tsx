@@ -9,6 +9,8 @@ import {
   Linking,
   ScrollView,
   Platform,
+  Image,
+  Modal,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,6 +23,7 @@ export default function AssignedRequestScreen() {
   const [request, setRequest] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
+  const [showImageModal, setShowImageModal] = useState(false);
 
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
@@ -116,6 +119,16 @@ export default function AssignedRequestScreen() {
   const userPhone = request?.userPhone || 'Available upon assignment';
   const isStarted = request?.status === 'IN_PROGRESS';
 
+  const getImageUrl = (path?: string) => {
+    if (!path) return null;
+    if (path.startsWith('http')) return path;
+    const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+    const baseURL = api.defaults.baseURL?.replace(/\/api\/?$/, '') || 'http://localhost:4000';
+    return `${baseURL}/${cleanPath}`;
+  };
+
+  const photoFullUrl = getImageUrl(request?.photoUrl);
+
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Header */}
@@ -166,6 +179,25 @@ export default function AssignedRequestScreen() {
           <Text style={[styles.descriptionText, { color: theme.text }]}>
             {request?.description || 'No description provided.'}
           </Text>
+
+          {photoFullUrl && (
+            <View style={styles.injuryPhotoBox}>
+              <Text style={[styles.cardSectionLabel, { color: theme.textSecondary, marginBottom: 8, marginTop: 12 }]}>
+                INJURY PHOTO
+              </Text>
+              <TouchableOpacity 
+                style={styles.injuryPhotoContainer}
+                onPress={() => setShowImageModal(true)}
+                activeOpacity={0.9}
+              >
+                <Image source={{ uri: photoFullUrl }} style={styles.injuryPhoto} />
+                <View style={styles.photoOverlay}>
+                  <Ionicons name="expand-outline" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+                  <Text style={styles.photoOverlayText}>Injury Photo (Tap to inspect)</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+          )}
 
           {request?.petId && (
             <View style={styles.petBox}>
@@ -222,6 +254,31 @@ export default function AssignedRequestScreen() {
           </View>
         )}
       </ScrollView>
+
+      {/* Full-Screen Injury Image Modal */}
+      <Modal
+        visible={showImageModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowImageModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity 
+            style={styles.modalCloseBtn}
+            onPress={() => setShowImageModal(false)}
+          >
+            <Ionicons name="close-circle" size={36} color="#FFFFFF" />
+          </TouchableOpacity>
+          {photoFullUrl && (
+            <Image 
+              source={{ uri: photoFullUrl }} 
+              style={styles.modalFullImage} 
+              resizeMode="contain"
+            />
+          )}
+          <Text style={styles.modalCaption}>Injury Photo</Text>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -389,6 +446,58 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: 'center',
     marginTop: 4,
+  },
+  injuryPhotoBox: {
+    marginTop: 10,
+  },
+  injuryPhotoContainer: {
+    position: 'relative',
+    height: 180,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  injuryPhoto: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  photoOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 6,
+  },
+  photoOverlayText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.92)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalCloseBtn: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    zIndex: 10,
+  },
+  modalFullImage: {
+    width: '90%',
+    height: '75%',
+  },
+  modalCaption: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '600',
+    marginTop: 15,
   },
   centerBox: {
     flex: 1,

@@ -9,6 +9,8 @@ import {
   Switch,
   Alert,
   RefreshControl,
+  Image,
+  Modal,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -24,6 +26,7 @@ export default function DoctorHomeScreen() {
   const [requests, setRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedImageModal, setSelectedImageModal] = useState<string | null>(null);
 
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
@@ -72,6 +75,7 @@ export default function DoctorHomeScreen() {
             {
               _id: data.requestId,
               description: data.description,
+              photoUrl: data.photoUrl,
               userName: data.userName,
               location: { coordinates: data.location },
               status: 'OPEN',
@@ -113,6 +117,14 @@ export default function DoctorHomeScreen() {
     }
   };
 
+  const getImageUrl = (path?: string) => {
+    if (!path) return null;
+    if (path.startsWith('http')) return path;
+    const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+    const baseURL = api.defaults.baseURL?.replace(/\/api\/?$/, '') || 'http://localhost:4000';
+    return `${baseURL}/${cleanPath}`;
+  };
+
   const doctorName = doctorProfile?.user?.name
     ? `Dr. ${doctorProfile.user.name.first} ${doctorProfile.user.name.last}`.trim()
     : 'Doctor Responder';
@@ -124,6 +136,8 @@ export default function DoctorHomeScreen() {
     const requesterName = item.userId
       ? `${item.userId.name?.first || 'Pet'} ${item.userId.name?.last || 'Owner'}`.trim()
       : item.userName || 'Pet Owner';
+
+    const photoFullUrl = getImageUrl(item.photoUrl);
 
     return (
       <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
@@ -144,8 +158,25 @@ export default function DoctorHomeScreen() {
 
         <Text style={[styles.description, { color: theme.text }]}>{item.description}</Text>
 
+        {photoFullUrl && (
+          <TouchableOpacity 
+            style={styles.injuryPhotoContainer}
+            onPress={() => setSelectedImageModal(photoFullUrl)}
+            activeOpacity={0.9}
+          >
+            <Image 
+              source={{ uri: photoFullUrl }} 
+              style={styles.injuryPhoto} 
+            />
+            <View style={styles.preMedicalOverlay}>
+              <Ionicons name="expand-outline" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+              <Text style={styles.preMedicalOverlayText}>Injury Photo (Tap to inspect)</Text>
+            </View>
+          </TouchableOpacity>
+        )}
+
         <TouchableOpacity
-          style={[styles.acceptBtn, { opacity: available ? 1 : 0.6 }]}
+          style={[styles.acceptBtn, { opacity: available ? 1 : 0.6, marginTop: 12 }]}
           onPress={() => handleAcceptRequest(item._id || item.requestId)}
           disabled={!available}
         >
@@ -200,20 +231,21 @@ export default function DoctorHomeScreen() {
               value={isApproved ? available : false}
               onValueChange={toggleAvailability}
               disabled={!isApproved}
-              trackColor={{ false: '#767577', true: '#10B981' }}
+              trackColor={{ false: '#D1D5DB', true: '#10B981' }}
               thumbColor="#FFFFFF"
             />
           </View>
         </View>
       </View>
 
-      {/* Main Incoming Feed */}
+      {/* Feed Title */}
       <View style={styles.feedHeader}>
         <Text style={[styles.sectionTitle, { color: theme.text }]}>
           Incoming Emergencies ({requests.length})
         </Text>
       </View>
 
+      {/* Emergency List */}
       {loading ? (
         <View style={styles.centerBox}>
           <ActivityIndicator size="large" color={theme.primary} />
@@ -223,19 +255,18 @@ export default function DoctorHomeScreen() {
         </View>
       ) : !isApproved ? (
         <View style={styles.pendingContainer}>
-          <Ionicons 
-            name={isRejected ? "alert-circle-outline" : "time-outline"} 
-            size={64} 
-            color={isRejected ? "#EF4444" : "#F59E0B"} 
-            style={{ marginBottom: 12 }}
+          <Ionicons
+            name={isRejected ? 'alert-circle-outline' : 'time-outline'}
+            size={64}
+            color={isRejected ? '#EF4444' : theme.primary}
           />
           <Text style={[styles.pendingTitle, { color: theme.text }]}>
-            {isRejected ? "Application Rejected" : "Awaiting Verification"}
+            {isRejected ? 'Verification Rejected' : 'Account Under Review'}
           </Text>
           <Text style={[styles.pendingSub, { color: theme.textSecondary }]}>
-            {isRejected 
-              ? "Your certification documents were rejected by the administrator. Please contact support or register again with valid proofs."
-              : "An administrator is currently reviewing your medical degree and credentials. You will be activated on the emergency network once verified."}
+            {isRejected
+              ? 'Your medical credentials were rejected. Please re-upload valid documents.'
+              : 'An administrator is currently reviewing your medical degree and credentials. You will be activated on the emergency network once verified.'}
           </Text>
           {!isRejected && (
             <ActivityIndicator size="small" color={theme.primary} style={{ marginTop: 20 }} />
@@ -261,6 +292,31 @@ export default function DoctorHomeScreen() {
           }
         />
       )}
+
+      {/* Full-Screen Pre-Medical Image Modal */}
+      <Modal
+        visible={!!selectedImageModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setSelectedImageModal(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity 
+            style={styles.modalCloseBtn}
+            onPress={() => setSelectedImageModal(null)}
+          >
+            <Ionicons name="close-circle" size={36} color="#FFFFFF" />
+          </TouchableOpacity>
+          {selectedImageModal && (
+            <Image 
+              source={{ uri: selectedImageModal }} 
+              style={styles.modalFullImage} 
+              resizeMode="contain"
+            />
+          )}
+          <Text style={styles.modalCaption}>Injury Photo</Text>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -332,7 +388,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   listContent: {
-    padding: 16,
+    paddingHorizontal: 20,
     paddingBottom: 40,
   },
   card: {
@@ -381,7 +437,35 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     marginTop: 12,
-    marginBottom: 16,
+    marginBottom: 12,
+  },
+  injuryPhotoContainer: {
+    position: 'relative',
+    height: 160,
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  injuryPhoto: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  preMedicalOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 6,
+  },
+  preMedicalOverlayText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
   },
   acceptBtn: {
     flexDirection: 'row',
@@ -434,5 +518,27 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     textAlign: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.92)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalCloseBtn: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    zIndex: 10,
+  },
+  modalFullImage: {
+    width: '90%',
+    height: '75%',
+  },
+  modalCaption: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '600',
+    marginTop: 15,
   },
 });

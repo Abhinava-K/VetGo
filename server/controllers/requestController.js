@@ -18,11 +18,17 @@ exports.createRequest = async (req, res) => {
       'doc-4': { name: 'Dr. Amit Patel', qualification: 'Senior Veterinary Clinician', phone: '+18005550466' },
     };
 
+    let photoUrl = null;
+    if (req.file) {
+      photoUrl = req.file.path.replace(/\\/g, '/');
+    }
+
     const requestData = {
       userId: req.user.id,
       petId: petId || null,
       animalCategory: animalCategory || (petId ? 'PET' : 'STRAY'),
       description,
+      photoUrl,
       location: {
         type: 'Point',
         coordinates: location.coordinates // [lng, lat]
@@ -46,6 +52,7 @@ exports.createRequest = async (req, res) => {
       io.to('doctors_room').emit('request:new', {
         requestId: request._id,
         description: request.description,
+        photoUrl: request.photoUrl,
         location: request.location.coordinates,
         userName: `${req.user.name?.first || 'User'} ${req.user.name?.last || ''}`.trim()
       });

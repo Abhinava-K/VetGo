@@ -24,6 +24,10 @@ const requestSchema = new mongoose.Schema({
     required: true,
     maxlength: 400
   },
+  photoUrl: {
+    type: String,
+    default: null
+  },
   location: {
     type: {
       type: String,

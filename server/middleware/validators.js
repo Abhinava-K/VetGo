@@ -33,6 +33,11 @@ const requestSchema = Joi.object({
 }).unknown(true);
 
 const validate = (schema) => (req, res, next) => {
+  if (req.body && typeof req.body.location === 'string') {
+    try {
+      req.body.location = JSON.parse(req.body.location);
+    } catch (e) {}
+  }
   const { error } = schema.validate(req.body);
   if (error) {
     return res.status(400).json({ message: error.details[0].message });

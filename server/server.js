@@ -51,12 +51,13 @@ app.use('/api/doctors', require('./routes/doctors'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/pets', require('./routes/pets'));
 
-// Create upload directory if it doesn't exist
+// Create upload directories if they don't exist
 const fs = require('fs');
-const dir = './uploads/doctorDocs';
-if (!fs.existsSync(dir)) {
-  fs.mkdirSync(dir, { recursive: true });
-}
+['./uploads/doctorDocs', './uploads/emergencyPhotos'].forEach((dir) => {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+});
 
 const PORT = process.env.PORT || 4000;
 
