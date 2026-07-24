@@ -50,6 +50,7 @@ app.use('/api/requests', require('./routes/requests'));
 app.use('/api/doctors', require('./routes/doctors'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/pets', require('./routes/pets'));
+app.use('/api/reports', require('./routes/reports'));
 
 // Create upload directories if they don't exist
 const fs = require('fs');

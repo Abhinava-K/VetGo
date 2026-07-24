@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemeContext } from '../../context/ThemeContext';
 import api from '../../services/api';
+import ReportModal from '../../components/common/ReportModal';
 
 export default function DoctorHistoryScreen() {
   const { theme } = useContext(ThemeContext);
@@ -27,9 +28,10 @@ export default function DoctorHistoryScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   
-  // State for detail modal & zoom image modal
+  // State for detail modal, zoom image modal & report modal
   const [selectedCase, setSelectedCase] = useState<any | null>(null);
   const [zoomImage, setZoomImage] = useState<string | null>(null);
+  const [reportModalVisible, setReportModalVisible] = useState<boolean>(false);
 
   const fetchCases = async () => {
     try {
@@ -182,9 +184,18 @@ export default function DoctorHistoryScreen() {
         ) : null}
 
         <View style={[styles.actionRow, { borderTopColor: theme.border }]}>
-          <Text style={[styles.actionText, { color: isActive ? theme.primary : theme.textSecondary }]}>
+          <Text style={[styles.actionText, { color: isActive ? theme.primary : theme.textSecondary, flex: 1 }]}>
             {isActive ? '⚡ Active Case (Go to Live View)' : '📄 View Full Case Record & Transcript'}
           </Text>
+          <TouchableOpacity
+            style={styles.cardFlagBtn}
+            onPress={() => {
+              setSelectedCase(item);
+              setReportModalVisible(true);
+            }}
+          >
+            <Ionicons name="flag-outline" size={18} color="#EF4444" />
+          </TouchableOpacity>
           <Ionicons 
             name="chevron-forward" 
             size={18} 
@@ -247,9 +258,17 @@ export default function DoctorHistoryScreen() {
                     ID: {selectedCase._id}
                   </Text>
                 </View>
-                <TouchableOpacity onPress={() => setSelectedCase(null)} style={styles.modalCloseIcon}>
-                  <Ionicons name="close" size={24} color={theme.text} />
-                </TouchableOpacity>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <TouchableOpacity 
+                    style={{ padding: 6, marginRight: 6 }}
+                    onPress={() => setReportModalVisible(true)}
+                  >
+                    <Ionicons name="flag-outline" size={22} color="#EF4444" />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => setSelectedCase(null)} style={styles.modalCloseIcon}>
+                    <Ionicons name="close" size={24} color={theme.text} />
+                  </TouchableOpacity>
+                </View>
               </View>
 
               <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalScroll}>
@@ -387,6 +406,15 @@ export default function DoctorHistoryScreen() {
                     ) : null}
                   </View>
                 ) : null}
+
+                {/* Additional Explicit Report Button inside Transcript */}
+                <TouchableOpacity
+                  style={styles.modalReportBtn}
+                  onPress={() => setReportModalVisible(true)}
+                >
+                  <Ionicons name="flag" size={16} color="#DC2626" style={{ marginRight: 6 }} />
+                  <Text style={styles.modalReportBtnText}>Report Post-Service Safety Concern</Text>
+                </TouchableOpacity>
               </ScrollView>
             </View>
           </View>
@@ -417,6 +445,18 @@ export default function DoctorHistoryScreen() {
           <Text style={styles.zoomCaption}>Injury Photo</Text>
         </View>
       </Modal>
+
+      {/* Safety Report Modal */}
+      {selectedCase && (
+        <ReportModal
+          visible={reportModalVisible}
+          onClose={() => setReportModalVisible(false)}
+          requestId={selectedCase._id}
+          reportedUserId={selectedCase.userId?._id || selectedCase.userId}
+          reporterRole="DOCTOR"
+          isPostService={true}
+        />
+      )}
     </View>
   );
 }
@@ -685,5 +725,30 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     marginTop: 15,
+  },
+  modalReportBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: '#FEE2E2',
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+    marginTop: 10,
+    marginBottom: 10,
+  },
+  modalReportBtnText: {
+    color: '#DC2626',
+    fontWeight: 'bold',
+    fontSize: 13,
+  },
+  cardFlagBtn: {
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 6,
+    backgroundColor: '#FEE2E2',
+    marginRight: 6,
+    alignSelf: 'center',
   },
 });

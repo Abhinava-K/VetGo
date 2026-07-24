@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const DoctorProfile = require('../models/DoctorProfile');
 const Request = require('../models/Request');
+const Report = require('../models/Report');
 
 // @desc    Get dashboard metrics & stats
 // @route   GET /api/admin/stats
@@ -18,6 +19,7 @@ exports.getAdminStats = async (req, res) => {
     const totalRequests = await Request.countDocuments();
     const openRequests = await Request.countDocuments({ status: 'OPEN' });
     const completedRequests = await Request.countDocuments({ status: 'COMPLETED' });
+    const pendingReports = await Report.countDocuments({ status: 'PENDING' });
 
     res.json({
       totalUsers,
@@ -25,7 +27,8 @@ exports.getAdminStats = async (req, res) => {
       pendingDoctors,
       totalRequests,
       openRequests,
-      completedRequests
+      completedRequests,
+      pendingReports
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -251,6 +254,54 @@ exports.searchDoctors = async (req, res) => {
     });
   } catch (error) {
     console.error('Error searching doctors:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Get all flagged reports
+// @route   GET /api/admin/reports
+exports.getAllReports = async (req, res) => {
+  try {
+    const reports = await Report.find()
+      .populate('reporterId', 'name email role')
+      .populate('reportedId', 'name email role')
+      .populate('requestId', 'description status photoUrl location createdAt')
+      .sort({ createdAt: -1 });
+
+    res.json(reports);
+  } catch (error) {
+    console.error('Error getting reports:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Update report status (RESOLVED / DISMISSED)
+// @route   PUT /api/admin/reports/:id/status
+exports.updateReportStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, adminNotes } = req.body;
+
+    if (!['PENDING', 'RESOLVED', 'DISMISSED'].includes(status)) {
+      return res.status(400).json({ message: 'Invalid report status' });
+    }
+
+    const report = await Report.findByIdAndUpdate(
+      id,
+      { status, adminNotes },
+      { new: true }
+    )
+      .populate('reporterId', 'name email role')
+      .populate('reportedId', 'name email role')
+      .populate('requestId', 'description status photoUrl location createdAt');
+
+    if (!report) {
+      return res.status(404).json({ message: 'Report not found' });
+    }
+
+    res.json({ message: `Report marked as ${status}`, report });
+  } catch (error) {
+    console.error('Error updating report status:', error);
     res.status(500).json({ message: error.message });
   }
 };

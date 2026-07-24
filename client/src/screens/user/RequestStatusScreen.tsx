@@ -16,6 +16,7 @@ import { ThemeContext } from '../../context/ThemeContext';
 import { getSocket } from '../../services/socket';
 import api from '../../services/api';
 import { Request } from '../../types';
+import ReportModal from '../../components/common/ReportModal';
 
 export default function RequestStatusScreen() {
   const route = useRoute<any>();
@@ -27,6 +28,7 @@ export default function RequestStatusScreen() {
   const [ratingModal, setRatingModal] = useState(false);
   const [rating, setRating] = useState(5);
   const [review, setReview] = useState('');
+  const [reportModalVisible, setReportModalVisible] = useState(false);
   
   const { theme } = useContext(ThemeContext);
   const socket = getSocket();
@@ -150,6 +152,12 @@ export default function RequestStatusScreen() {
                 <Text style={styles.completeBtnText}>Complete & Rate Service</Text>
               </TouchableOpacity>
             )}
+            <TouchableOpacity 
+              style={[styles.reportBtn, { marginTop: 10 }]}
+              onPress={() => setReportModalVisible(true)}
+            >
+              <Text style={styles.reportBtnText}>🚩 Report Doctor / Safety Concern</Text>
+            </TouchableOpacity>
           </View>
         )}
       </View>
@@ -182,6 +190,16 @@ export default function RequestStatusScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Safety Report Modal */}
+      <ReportModal
+        visible={reportModalVisible}
+        onClose={() => setReportModalVisible(false)}
+        requestId={requestId}
+        reportedUserId={request?.acceptedBy?._id || request?.acceptedBy || request?.doctor?.id}
+        reporterRole="USER"
+        isPostService={request?.status === 'COMPLETED' || request?.status === 'CANCELLED'}
+      />
     </View>
   );
 }
@@ -273,5 +291,18 @@ const styles = StyleSheet.create({
   completeBtnText: {
     color: '#FFF',
     fontWeight: 'bold',
+  },
+  reportBtn: {
+    padding: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    backgroundColor: '#FEE2E2',
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+  },
+  reportBtnText: {
+    color: '#DC2626',
+    fontWeight: 'bold',
+    fontSize: 13,
   }
 });

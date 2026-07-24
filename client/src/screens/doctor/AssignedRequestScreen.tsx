@@ -18,12 +18,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { ThemeContext } from '../../context/ThemeContext';
 import api from '../../services/api';
 import { initSocket } from '../../services/socket';
+import ReportModal from '../../components/common/ReportModal';
 
 export default function AssignedRequestScreen() {
   const [request, setRequest] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
   const [showImageModal, setShowImageModal] = useState(false);
+  const [reportModalVisible, setReportModalVisible] = useState(false);
 
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
@@ -146,6 +148,12 @@ export default function AssignedRequestScreen() {
           <Ionicons name="arrow-back" size={24} color={theme.text} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: theme.text }]}>Active Emergency</Text>
+        <TouchableOpacity 
+          style={styles.reportHeaderBtn} 
+          onPress={() => setReportModalVisible(true)}
+        >
+          <Ionicons name="flag-outline" size={20} color="#EF4444" />
+        </TouchableOpacity>
         <View style={styles.statusBadge}>
           <Text style={styles.statusBadgeText}>{request?.status || 'ASSIGNED'}</Text>
         </View>
@@ -279,6 +287,16 @@ export default function AssignedRequestScreen() {
           <Text style={styles.modalCaption}>Injury Photo</Text>
         </View>
       </Modal>
+
+      {/* Safety Report Modal */}
+      <ReportModal
+        visible={reportModalVisible}
+        onClose={() => setReportModalVisible(false)}
+        requestId={requestId}
+        reportedUserId={request?.userId?._id || request?.userId}
+        reporterRole="DOCTOR"
+        isPostService={false}
+      />
     </View>
   );
 }
@@ -296,6 +314,10 @@ const styles = StyleSheet.create({
   },
   backBtn: {
     padding: 6,
+  },
+  reportHeaderBtn: {
+    padding: 6,
+    marginRight: 6,
   },
   headerTitle: {
     fontSize: 18,

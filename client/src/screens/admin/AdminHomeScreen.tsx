@@ -20,7 +20,7 @@ import { AuthContext } from '../../context/AuthContext';
 import api from '../../services/api';
 import SlideButton from '../../components/common/SlideButton';
 
-type TabType = 'applications' | 'requests' | 'stats';
+type TabType = 'applications' | 'requests' | 'reports' | 'stats';
 
 export default function AdminHomeScreen() {
   const [activeTab, setActiveTab] = useState<TabType>('applications');
@@ -31,6 +31,7 @@ export default function AdminHomeScreen() {
   const [stats, setStats] = useState<any>(null);
   const [applications, setApplications] = useState<any[]>([]);
   const [requests, setRequests] = useState<any[]>([]);
+  const [reports, setReports] = useState<any[]>([]);
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
@@ -122,20 +123,32 @@ export default function AdminHomeScreen() {
 
   const loadAdminData = async () => {
     try {
-      const [statsRes, appsRes, reqsRes] = await Promise.allSettled([
+      const [statsRes, appsRes, reqsRes, repsRes] = await Promise.allSettled([
         api.get('/admin/stats'),
         api.get('/admin/doctor-applications'),
         api.get('/admin/requests'),
+        api.get('/admin/reports'),
       ]);
 
       if (statsRes.status === 'fulfilled') setStats(statsRes.value.data);
       if (appsRes.status === 'fulfilled') setApplications(appsRes.value.data);
       if (reqsRes.status === 'fulfilled') setRequests(reqsRes.value.data);
+      if (repsRes.status === 'fulfilled') setReports(repsRes.value.data);
     } catch (error) {
       console.error('Error loading admin data:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
+    }
+  };
+
+  const handleUpdateReportStatus = async (reportId: string, status: 'RESOLVED' | 'DISMISSED') => {
+    try {
+      await api.put(`/admin/reports/${reportId}/status`, { status });
+      Alert.alert('Report Updated', `Report marked as ${status}`);
+      loadAdminData();
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.message || 'Failed to update report');
     }
   };
 
@@ -462,6 +475,99 @@ export default function AdminHomeScreen() {
     ? applications.filter(app => app.userId?.isDeleted === true)
     : applications.filter(app => app.isVerified && !app.userId?.isDeleted);
 
+  const renderReportCard = ({ item }: { item: any }) => {
+    const reporterName = item.reporterId?.name
+      ? `${item.reporterId.name.first} ${item.reporterId.name.last}`.trim()
+      : 'Unknown User';
+    const reporterRole = item.reporterRole || 'USER';
+
+    const reportedName = item.reportedId?.name
+      ? `${item.reportedId.name.first} ${item.reportedId.name.last}`.trim()
+      : 'Unknown Target';
+    const reportedRole = item.reportedId?.role || (reporterRole === 'USER' ? 'DOCTOR' : 'USER');
+
+    const isPending = item.status === 'PENDING';
+    const isResolved = item.status === 'RESOLVED';
+
+    const statusBg = isPending ? '#FEF3C7' : isResolved ? '#D1FAE5' : '#F3F4F6';
+    const statusText = isPending ? '#D97706' : isResolved ? '#059669' : '#6B7280';
+
+    const formatCategory = (cat: string) => {
+      return cat.replace(/_/g, ' ');
+    };
+
+    return (
+      <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+        <View style={styles.cardHeader}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Ionicons name="flag" size={18} color="#EF4444" style={{ marginRight: 6 }} />
+            <Text style={[styles.cardTitle, { color: theme.text }]}>Safety Report</Text>
+          </View>
+          <View style={[styles.badge, { backgroundColor: statusBg }]}>
+            <Text style={[styles.badgeText, { color: statusText }]}>{item.status}</Text>
+          </View>
+        </View>
+
+        {/* Reporter Info */}
+        <View style={styles.qualSection}>
+          <Text style={[styles.qualLabel, { color: theme.textSecondary }]}>Reporter: </Text>
+          <Text style={[styles.qualText, { color: theme.text, fontWeight: 'bold' }]}>
+            {reporterName} ({reporterRole})
+          </Text>
+        </View>
+
+        {/* Reported Target Info */}
+        <View style={styles.qualSection}>
+          <Text style={[styles.qualLabel, { color: theme.textSecondary }]}>Reported Target: </Text>
+          <Text style={[styles.qualText, { color: '#EF4444', fontWeight: 'bold' }]}>
+            {reportedName} ({reportedRole})
+          </Text>
+        </View>
+
+        {/* Category Tag */}
+        <View style={[styles.terminatedReasonSection, { backgroundColor: '#FEE2E2', borderColor: '#FCA5A5', marginTop: 8 }]}>
+          <Text style={[styles.terminatedReasonLabel, { color: '#DC2626' }]}>ISSUE TAG:</Text>
+          <Text style={[styles.terminatedReasonText, { color: '#991B1B', fontWeight: 'bold' }]}>
+            {formatCategory(item.category)}
+          </Text>
+        </View>
+
+        {/* Description */}
+        {item.description ? (
+          <View style={[styles.qualSection, { marginTop: 8 }]}>
+            <Text style={[styles.qualLabel, { color: theme.textSecondary }]}>Description / Details:</Text>
+            <Text style={[styles.qualText, { color: theme.text, fontStyle: 'italic' }]}>{item.description}</Text>
+          </View>
+        ) : null}
+
+        {item.requestId && (
+          <Text style={{ fontSize: 11, color: theme.textSecondary, marginTop: 8 }}>
+            Request ID: {item.requestId._id || item.requestId} • Logged {new Date(item.createdAt).toLocaleString()}
+          </Text>
+        )}
+
+        {/* Action buttons */}
+        {isPending && (
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 }}>
+            <TouchableOpacity
+              style={[styles.actionBtn, { backgroundColor: '#10B981', flex: 1, marginRight: 6, paddingVertical: 10, borderRadius: 8, alignItems: 'center' }]}
+              onPress={() => handleUpdateReportStatus(item._id, 'RESOLVED')}
+            >
+              <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 13 }}>Mark Resolved</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.actionBtn, { backgroundColor: '#6B7280', flex: 1, marginLeft: 6, paddingVertical: 10, borderRadius: 8, alignItems: 'center' }]}
+              onPress={() => handleUpdateReportStatus(item._id, 'DISMISSED')}
+            >
+              <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 13 }}>Dismiss</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+    );
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Header Bar */}
@@ -513,6 +619,20 @@ export default function AdminHomeScreen() {
               ]}
             >
               Emergency Feed
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.tabItem, activeTab === 'reports' && styles.tabActive]}
+            onPress={() => setActiveTab('reports')}
+          >
+            <Text
+              style={[
+                styles.tabText,
+                { color: activeTab === 'reports' ? '#EF4444' : theme.textSecondary, fontWeight: activeTab === 'reports' ? 'bold' : 'normal' },
+              ]}
+            >
+              Reports 🚩 {stats?.pendingReports ? `(${stats.pendingReports})` : ''}
             </Text>
           </TouchableOpacity>
 
@@ -727,6 +847,22 @@ export default function AdminHomeScreen() {
             </View>
           }
         />
+      ) : activeTab === 'reports' ? (
+        <FlatList
+          data={reports}
+          keyExtractor={(item) => item._id}
+          renderItem={renderReportCard}
+          contentContainerStyle={styles.listContent}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <Ionicons name="shield-checkmark-outline" size={48} color="#10B981" />
+              <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
+                No safety reports logged. System clean!
+              </Text>
+            </View>
+          }
+        />
       ) : (
         <ScrollView
           contentContainerStyle={styles.listContent}
@@ -755,6 +891,12 @@ export default function AdminHomeScreen() {
               <Ionicons name="pulse" size={28} color="#8B5CF6" />
               <Text style={[styles.statValue, { color: theme.text }]}>{stats?.totalRequests || 0}</Text>
               <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Total Emergencies</Text>
+            </View>
+
+            <View style={[styles.statCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+              <Ionicons name="flag" size={28} color="#EF4444" />
+              <Text style={[styles.statValue, { color: theme.text }]}>{stats?.pendingReports || 0}</Text>
+              <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Pending Safety Reports</Text>
             </View>
           </View>
         </ScrollView>
@@ -1352,5 +1494,11 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
     marginLeft: 6,
+  },
+  actionBtn: {
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
