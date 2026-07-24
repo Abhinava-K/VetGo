@@ -222,15 +222,35 @@ exports.getMyRequests = async (req, res) => {
   try {
     let requests;
     if (req.user.role === 'DOCTOR') {
-      requests = await RequestModel.find({ acceptedBy: req.user.id })
-        .populate('userId', 'name')
+      const rawRequests = await RequestModel.find({ acceptedBy: req.user.id })
+        .populate('userId', 'name phoneEncrypted')
         .populate('petId')
         .sort({ createdAt: -1 });
+
+      requests = rawRequests.map(doc => {
+        const obj = doc.toObject();
+        // Privacy rule: Only reveal user contact phone for active assigned emergencies
+        const isActive = obj.status === 'ASSIGNED' || obj.status === 'IN_PROGRESS';
+        if (isActive && obj.userId && obj.userId.phoneEncrypted) {
+          obj.userPhone = decryptField(obj.userId.phoneEncrypted);
+        } else {
+          obj.userPhone = null;
+        }
+        return obj;
+      });
     } else {
-      requests = await RequestModel.find({ userId: req.user.id })
-        .populate('acceptedBy', 'name')
+      const rawRequests = await RequestModel.find({ userId: req.user.id })
+        .populate('acceptedBy', 'name phoneEncrypted')
         .populate('petId')
         .sort({ createdAt: -1 });
+
+      requests = rawRequests.map(doc => {
+        const obj = doc.toObject();
+        if (obj.acceptedBy && obj.acceptedBy.phoneEncrypted) {
+          obj.doctorPhone = decryptField(obj.acceptedBy.phoneEncrypted);
+        }
+        return obj;
+      });
     }
     res.json(requests);
   } catch (error) {
