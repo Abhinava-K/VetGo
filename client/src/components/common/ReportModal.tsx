@@ -57,22 +57,14 @@ export default function ReportModal({
         ];
       }
     } else {
-      if (isPostService) {
-        return [
-          { key: 'RETALIATORY_FEEDBACK', label: '😡 Retaliatory Feedback / Rating Extortion' },
-          { key: 'USER_HARASSMENT', label: '🗣️ Abusive / Harassing Behavior' },
-          { key: 'OTHER', label: '📝 Other Issue...' },
-        ];
-      } else {
-        return [
-          { key: 'SPAM_FAKE_EMERGENCY', label: '🚨 Fake Emergency / Spam Broadcast' },
-          { key: 'USER_NO_SHOW', label: '🚫 User No-Show / Unresponsive' },
-          { key: 'OFFENSIVE_PHOTO', label: '🖼️ Offensive / Inappropriate Photo' },
-          { key: 'UNSAFE_LOCATION', label: '⚠️ Unsafe / Hazardous Location' },
-          { key: 'USER_HARASSMENT', label: '🗣️ Abusive / Harassing Behavior' },
-          { key: 'OTHER', label: '📝 Other Issue...' },
-        ];
-      }
+      return [
+        { key: 'SPAM_FAKE_EMERGENCY', label: '🚨 Fake Emergency / Spam Broadcast' },
+        { key: 'USER_NO_SHOW', label: '🚫 User No-Show / Unresponsive' },
+        { key: 'OFFENSIVE_PHOTO', label: '🖼️ Offensive / Inappropriate Photo' },
+        { key: 'USER_HARASSMENT', label: '🗣️ Abusive / Harassing Behavior' },
+        { key: 'RETALIATORY_FEEDBACK', label: '😡 Fake 1-Star Review / Unfair Rating' },
+        { key: 'OTHER', label: '📝 Other Issue...' },
+      ];
     };
   };
 
@@ -105,12 +97,14 @@ export default function ReportModal({
       Alert.alert(
         'Report Submitted',
         'Thank you. Your report has been submitted to our safety moderation team for admin review.',
-        [{ text: 'OK', onPress: () => {
-          setSelectedCategory('');
-          setDescription('');
-          onClose();
-          if (onSuccess) onSuccess();
-        }}]
+        [{
+          text: 'OK', onPress: () => {
+            setSelectedCategory('');
+            setDescription('');
+            onClose();
+            if (onSuccess) onSuccess();
+          }
+        }]
       );
     } catch (error: any) {
       console.error('Report submission error:', error);

@@ -493,7 +493,20 @@ export default function AdminHomeScreen() {
     const statusText = isPending ? '#D97706' : isResolved ? '#059669' : '#6B7280';
 
     const formatCategory = (cat: string) => {
-      return cat.replace(/_/g, ' ');
+      const categoryMap: { [key: string]: string } = {
+        SPAM_FAKE_EMERGENCY: 'Fake Emergency / Spam',
+        USER_NO_SHOW: 'User No-Show',
+        OFFENSIVE_PHOTO: 'Offensive Photo',
+        USER_HARASSMENT: 'Abusive / Harassing Behavior',
+        RETALIATORY_FEEDBACK: 'Fake 1-Star Review / Unfair Rating',
+        DOCTOR_NO_SHOW_LATE: 'Doctor No-Show / Late',
+        RUDE_UNPROFESSIONAL: 'Rude / Unprofessional',
+        OVERCHARGING: 'Overcharging / Billing Dispute',
+        MEDICAL_NEGLIGENCE: 'Medical Negligence',
+        UNAUTHORIZED_CONTACT: 'Post-Service Harassment',
+        OTHER: 'Other Issue',
+      };
+      return categoryMap[cat] || cat.replace(/_/g, ' ');
     };
 
     return (

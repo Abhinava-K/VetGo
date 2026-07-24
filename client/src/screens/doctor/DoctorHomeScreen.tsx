@@ -19,6 +19,7 @@ import { ThemeContext } from '../../context/ThemeContext';
 import { AuthContext } from '../../context/AuthContext';
 import api from '../../services/api';
 import { initSocket } from '../../services/socket';
+import ReportModal from '../../components/common/ReportModal';
 
 export default function DoctorHomeScreen() {
   const [doctorProfile, setDoctorProfile] = useState<any>(null);
@@ -27,6 +28,8 @@ export default function DoctorHomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedImageModal, setSelectedImageModal] = useState<string | null>(null);
+  const [reportModalVisible, setReportModalVisible] = useState<boolean>(false);
+  const [selectedReportRequest, setSelectedReportRequest] = useState<any>(null);
 
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
@@ -151,22 +154,33 @@ export default function DoctorHomeScreen() {
               📍 0.2 km away • Immediate Dispatch
             </Text>
           </View>
-          <View style={styles.urgentBadge}>
-            <Text style={styles.urgentBadgeText}>URGENT</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View style={styles.urgentBadge}>
+              <Text style={styles.urgentBadgeText}>URGENT</Text>
+            </View>
+            <TouchableOpacity
+              style={{ padding: 6, marginLeft: 6 }}
+              onPress={() => {
+                setSelectedReportRequest(item);
+                setReportModalVisible(true);
+              }}
+            >
+              <Ionicons name="flag-outline" size={18} color="#EF4444" />
+            </TouchableOpacity>
           </View>
         </View>
 
         <Text style={[styles.description, { color: theme.text }]}>{item.description}</Text>
 
         {photoFullUrl && (
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.injuryPhotoContainer}
             onPress={() => setSelectedImageModal(photoFullUrl)}
             activeOpacity={0.9}
           >
-            <Image 
-              source={{ uri: photoFullUrl }} 
-              style={styles.injuryPhoto} 
+            <Image
+              source={{ uri: photoFullUrl }}
+              style={styles.injuryPhoto}
             />
             <View style={styles.preMedicalOverlay}>
               <Ionicons name="expand-outline" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
@@ -301,22 +315,36 @@ export default function DoctorHomeScreen() {
         onRequestClose={() => setSelectedImageModal(null)}
       >
         <View style={styles.modalOverlay}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.modalCloseBtn}
             onPress={() => setSelectedImageModal(null)}
           >
             <Ionicons name="close-circle" size={36} color="#FFFFFF" />
           </TouchableOpacity>
           {selectedImageModal && (
-            <Image 
-              source={{ uri: selectedImageModal }} 
-              style={styles.modalFullImage} 
+            <Image
+              source={{ uri: selectedImageModal }}
+              style={styles.modalFullImage}
               resizeMode="contain"
             />
           )}
           <Text style={styles.modalCaption}>Injury Photo</Text>
         </View>
       </Modal>
+
+      {/* Safety Report Modal for Incoming Broadcast */}
+      {selectedReportRequest && (
+        <ReportModal
+          visible={reportModalVisible}
+          onClose={() => {
+            setReportModalVisible(false);
+            setSelectedReportRequest(null);
+          }}
+          requestId={selectedReportRequest._id || selectedReportRequest.requestId}
+          reportedUserId={selectedReportRequest.userId?._id || selectedReportRequest.userId}
+          reporterRole="DOCTOR"
+        />
+      )}
     </View>
   );
 }
