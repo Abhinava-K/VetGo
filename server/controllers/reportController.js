@@ -66,3 +66,28 @@ exports.createReport = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// @desc    Check existing report status for a request by the logged-in user/doctor
+// @route   GET /api/reports/check/:requestId
+exports.getReportByRequest = async (req, res) => {
+  try {
+    const { requestId } = req.params;
+
+    const report = await Report.findOne({
+      reporterId: req.user.id,
+      requestId
+    });
+
+    if (!report) {
+      return res.json({ hasReported: false, report: null });
+    }
+
+    res.json({
+      hasReported: true,
+      report
+    });
+  } catch (error) {
+    console.error('Error checking report status:', error);
+    res.status(500).json({ message: error.message });
+  }
+};

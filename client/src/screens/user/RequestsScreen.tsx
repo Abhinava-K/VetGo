@@ -81,12 +81,26 @@ export default function RequestsScreen() {
 
           {/* Quick Direct Flag Report Button */}
           <TouchableOpacity
-            style={styles.flagBtn}
-            onPress={() => setSelectedReportRequest(item)}
+            style={[styles.flagBtn, item.hasReported && { opacity: 0.5 }]}
+            onPress={() => {
+              if (!item.hasReported) {
+                setSelectedReportRequest(item);
+              }
+            }}
+            disabled={item.hasReported}
             activeOpacity={0.7}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Ionicons name="flag-outline" size={16} color="#EF4444" />
+            {item.hasReported ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View style={{ backgroundColor: '#16A34A', width: 18, height: 18, borderRadius: 9, justifyContent: 'center', alignItems: 'center', marginRight: 4 }}>
+                  <Ionicons name="checkmark-sharp" size={12} color="#FFFFFF" />
+                </View>
+                <Ionicons name="flag" size={14} color="#EF4444" />
+              </View>
+            ) : (
+              <Ionicons name="flag-outline" size={16} color="#EF4444" />
+            )}
           </TouchableOpacity>
         </View>
       </TouchableOpacity>

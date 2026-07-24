@@ -188,13 +188,25 @@ export default function DoctorHistoryScreen() {
             {isActive ? '⚡ Active Case (Go to Live View)' : '📄 View Full Case Record & Transcript'}
           </Text>
           <TouchableOpacity
-            style={styles.cardFlagBtn}
+            style={[styles.cardFlagBtn, item.hasReported && { opacity: 0.5 }]}
             onPress={() => {
-              setSelectedCase(item);
-              setReportModalVisible(true);
+              if (!item.hasReported) {
+                setSelectedCase(item);
+                setReportModalVisible(true);
+              }
             }}
+            disabled={item.hasReported}
           >
-            <Ionicons name="flag-outline" size={18} color="#EF4444" />
+            {item.hasReported ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View style={{ backgroundColor: '#16A34A', width: 20, height: 20, borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginRight: 4 }}>
+                  <Ionicons name="checkmark-sharp" size={13} color="#FFFFFF" />
+                </View>
+                <Ionicons name="flag" size={16} color="#EF4444" />
+              </View>
+            ) : (
+              <Ionicons name="flag-outline" size={18} color="#EF4444" />
+            )}
           </TouchableOpacity>
           <Ionicons 
             name="chevron-forward" 
@@ -260,10 +272,24 @@ export default function DoctorHistoryScreen() {
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <TouchableOpacity 
-                    style={{ padding: 6, marginRight: 6 }}
-                    onPress={() => setReportModalVisible(true)}
+                    style={[{ padding: 6, marginRight: 6 }, selectedCase.hasReported && { opacity: 0.5 }]}
+                    onPress={() => {
+                      if (!selectedCase.hasReported) {
+                        setReportModalVisible(true);
+                      }
+                    }}
+                    disabled={selectedCase.hasReported}
                   >
-                    <Ionicons name="flag-outline" size={22} color="#EF4444" />
+                    {selectedCase.hasReported ? (
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <View style={{ backgroundColor: '#16A34A', width: 22, height: 22, borderRadius: 11, justifyContent: 'center', alignItems: 'center', marginRight: 4 }}>
+                          <Ionicons name="checkmark-sharp" size={14} color="#FFFFFF" />
+                        </View>
+                        <Ionicons name="flag" size={18} color="#EF4444" />
+                      </View>
+                    ) : (
+                      <Ionicons name="flag-outline" size={22} color="#EF4444" />
+                    )}
                   </TouchableOpacity>
                   <TouchableOpacity onPress={() => setSelectedCase(null)} style={styles.modalCloseIcon}>
                     <Ionicons name="close" size={24} color={theme.text} />
@@ -407,14 +433,76 @@ export default function DoctorHistoryScreen() {
                   </View>
                 ) : null}
 
-                {/* Additional Explicit Report Button inside Transcript */}
-                <TouchableOpacity
-                  style={styles.modalReportBtn}
-                  onPress={() => setReportModalVisible(true)}
-                >
-                  <Ionicons name="flag" size={16} color="#DC2626" style={{ marginRight: 6 }} />
-                  <Text style={styles.modalReportBtnText}>Report Post-Service Safety Concern</Text>
-                </TouchableOpacity>
+                {/* Report Section in Transcript Window */}
+                {selectedCase.hasReported ? (
+                  <View style={{ marginTop: 14 }}>
+                    {/* Yellow Under Review Box (Black Text for High Visibility) */}
+                    <View style={{ backgroundColor: '#FEF3C7', borderColor: '#F59E0B', borderWidth: 1.5, borderRadius: 12, padding: 14, marginBottom: 10 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                        <Ionicons 
+                          name={selectedCase.userReport?.status === 'PENDING' ? 'time' : selectedCase.userReport?.status === 'RESOLVED' ? 'checkmark-circle' : 'archive'} 
+                          size={18} 
+                          color="#000000" 
+                          style={{ marginRight: 6 }} 
+                        />
+                        <Text style={{ fontWeight: '800', fontSize: 14, color: '#000000' }}>
+                          {selectedCase.userReport?.status === 'PENDING'
+                            ? 'Report Under Review'
+                            : selectedCase.userReport?.status === 'RESOLVED'
+                            ? 'Report Resolved & Action Taken'
+                            : 'Report Reviewed & Closed'}
+                        </Text>
+                      </View>
+                      <Text style={{ fontSize: 13, color: '#000000', lineHeight: 18, fontWeight: '500' }}>
+                        {selectedCase.userReport?.status === 'PENDING'
+                          ? 'Your report has been received and is currently under active investigation by our safety & operations management team.'
+                          : selectedCase.userReport?.status === 'RESOLVED'
+                          ? 'Our management team completed the review and enforced appropriate corrective action on the reported user.'
+                          : 'Our management team reviewed your report and closed this issue.'}
+                      </Text>
+                    </View>
+
+                    {/* Submitted Report Details */}
+                    {selectedCase.userReport ? (
+                      <View style={{ backgroundColor: theme.background, borderColor: theme.border, borderWidth: 1, borderRadius: 12, padding: 12, marginBottom: 12 }}>
+                        <Text style={{ fontSize: 11, fontWeight: '800', color: theme.textSecondary }}>SUBMITTED REPORT DETAILS</Text>
+                        <Text style={{ fontSize: 13, fontWeight: '600', color: theme.text, marginTop: 4 }}>
+                          Category: {selectedCase.userReport.category ? selectedCase.userReport.category.replace(/_/g, ' ') : 'Safety Issue'}
+                        </Text>
+                        {selectedCase.userReport.description ? (
+                          <Text style={{ fontSize: 13, color: theme.text, fontStyle: 'italic', marginTop: 4 }}>
+                            "{selectedCase.userReport.description}"
+                          </Text>
+                        ) : null}
+                        {selectedCase.userReport.adminNotes ? (
+                          <View style={{ marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: theme.border }}>
+                            <Text style={{ fontSize: 12, fontWeight: 'bold', color: theme.primary }}>💬 Management Response Note:</Text>
+                            <Text style={{ fontSize: 13, color: theme.text, marginTop: 2 }}>{selectedCase.userReport.adminNotes}</Text>
+                          </View>
+                        ) : null}
+                      </View>
+                    ) : null}
+
+                    {/* Blurred Out Non-Functional Report Button */}
+                    <TouchableOpacity
+                      style={[styles.modalReportBtn, { opacity: 0.85, backgroundColor: '#DCFCE7', borderColor: '#86EFAC' }]}
+                      disabled={true}
+                    >
+                      <View style={{ backgroundColor: '#16A34A', width: 20, height: 20, borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginRight: 8 }}>
+                        <Ionicons name="checkmark-sharp" size={13} color="#FFFFFF" />
+                      </View>
+                      <Text style={[styles.modalReportBtnText, { color: '#15803D', fontWeight: 'bold' }]}>Report Already Sent ✓</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.modalReportBtn}
+                    onPress={() => setReportModalVisible(true)}
+                  >
+                    <Ionicons name="flag" size={16} color="#DC2626" style={{ marginRight: 6 }} />
+                    <Text style={styles.modalReportBtnText}>Report Post-Service Safety Concern</Text>
+                  </TouchableOpacity>
+                )}
               </ScrollView>
             </View>
           </View>

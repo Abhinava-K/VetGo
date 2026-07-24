@@ -1,6 +1,7 @@
 const RequestModel = require('../models/Request');
 const User = require('../models/User');
 const DoctorProfile = require('../models/DoctorProfile');
+const Report = require('../models/Report');
 const { decryptField } = require('../middleware/encryption');
 
 // @desc    Create a new emergency request
@@ -8,7 +9,7 @@ const { decryptField } = require('../middleware/encryption');
 exports.createRequest = async (req, res) => {
   try {
     const { description, location, petId, doctorId, animalCategory } = req.body;
-    
+
     const isMockDoctor = typeof doctorId === 'string' && doctorId.startsWith('doc-');
 
     const mockDoctorMap = {
@@ -75,12 +76,12 @@ exports.acceptRequest = async (req, res) => {
     // 1. Atomic update to ensure only one doctor accepts
     const request = await RequestModel.findOneAndUpdate(
       { _id: requestId, status: 'OPEN' },
-      { 
-        $set: { 
-          status: 'ASSIGNED', 
+      {
+        $set: {
+          status: 'ASSIGNED',
           acceptedBy: doctorId,
           acceptedAt: Date.now()
-        } 
+        }
       },
       { new: true }
     ).populate('userId', 'name phoneEncrypted');
@@ -97,7 +98,7 @@ exports.acceptRequest = async (req, res) => {
 
     // 3. Prepare data for response (including decrypted user phone)
     const userPhone = decryptField(request.userId.phoneEncrypted);
-    
+
     const doctor = await User.findById(doctorId).select('name phoneEncrypted');
     const doctorProfile = await DoctorProfile.findOne({ userId: doctorId });
 
@@ -135,11 +136,11 @@ exports.startRequest = async (req, res) => {
 
     const request = await RequestModel.findOneAndUpdate(
       { _id: requestId, acceptedBy: doctorId, status: 'ASSIGNED' },
-      { 
-        $set: { 
+      {
+        $set: {
           status: 'IN_PROGRESS',
           startedAt: Date.now()
-        } 
+        }
       },
       { new: true }
     );
@@ -220,6 +221,9 @@ exports.completeRequest = async (req, res) => {
 // @route   GET /api/requests/my-requests
 exports.getMyRequests = async (req, res) => {
   try {
+    const userReports = await Report.find({ reporterId: req.user.id });
+    const reportMap = new Map(userReports.map(r => [r.requestId.toString(), r.toObject()]));
+
     let requests;
     if (req.user.role === 'DOCTOR') {
       const rawRequests = await RequestModel.find({ acceptedBy: req.user.id })
@@ -229,13 +233,14 @@ exports.getMyRequests = async (req, res) => {
 
       requests = rawRequests.map(doc => {
         const obj = doc.toObject();
-        // Privacy rule: Only reveal user contact phone for active assigned emergencies
         const isActive = obj.status === 'ASSIGNED' || obj.status === 'IN_PROGRESS';
         if (isActive && obj.userId && obj.userId.phoneEncrypted) {
           obj.userPhone = decryptField(obj.userId.phoneEncrypted);
         } else {
           obj.userPhone = null;
         }
+        obj.hasReported = reportMap.has(obj._id.toString());
+        obj.userReport = reportMap.get(obj._id.toString()) || null;
         return obj;
       });
     } else {
@@ -249,6 +254,8 @@ exports.getMyRequests = async (req, res) => {
         if (obj.acceptedBy && obj.acceptedBy.phoneEncrypted) {
           obj.doctorPhone = decryptField(obj.acceptedBy.phoneEncrypted);
         }
+        obj.hasReported = reportMap.has(obj._id.toString());
+        obj.userReport = reportMap.get(obj._id.toString()) || null;
         return obj;
       });
     }

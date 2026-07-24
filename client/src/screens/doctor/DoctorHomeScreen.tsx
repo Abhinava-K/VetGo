@@ -159,13 +159,25 @@ export default function DoctorHomeScreen() {
               <Text style={styles.urgentBadgeText}>URGENT</Text>
             </View>
             <TouchableOpacity
-              style={{ padding: 6, marginLeft: 6 }}
+              style={[{ padding: 6, marginLeft: 6 }, item.hasReported && { opacity: 0.5 }]}
               onPress={() => {
-                setSelectedReportRequest(item);
-                setReportModalVisible(true);
+                if (!item.hasReported) {
+                  setSelectedReportRequest(item);
+                  setReportModalVisible(true);
+                }
               }}
+              disabled={item.hasReported}
             >
-              <Ionicons name="flag-outline" size={18} color="#EF4444" />
+              {item.hasReported ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <View style={{ backgroundColor: '#16A34A', width: 20, height: 20, borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginRight: 4 }}>
+                    <Ionicons name="checkmark-sharp" size={13} color="#FFFFFF" />
+                  </View>
+                  <Ionicons name="flag" size={16} color="#EF4444" />
+                </View>
+              ) : (
+                <Ionicons name="flag-outline" size={18} color="#EF4444" />
+              )}
             </TouchableOpacity>
           </View>
         </View>
