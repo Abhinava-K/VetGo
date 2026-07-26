@@ -63,13 +63,21 @@ export default function AdminHomeScreen({ route }: AdminHomeScreenProps = {}) {
   const [requests, setRequests] = useState<any[]>([]);
   const [reports, setReports] = useState<any[]>([]);
 
-  // Search & Filter State
+  // Search & Filter State (Doctors Tab)
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [ratingFilter, setRatingFilter] = useState<'all' | 'above_4_5' | 'above_4' | 'below_3_5' | 'below_2_5' | 'custom' | 'terminated'>('all');
   const [customRatingValue, setCustomRatingValue] = useState('4.0');
   const [customRatingDir, setCustomRatingDir] = useState<'above' | 'below'>('above');
   const [searchLoading, setSearchLoading] = useState(false);
+
+  // Search & Filter State (Emergency Requests Feed Tab)
+  const [reqSearchQuery, setReqSearchQuery] = useState('');
+  const [reqFilterTag, setReqFilterTag] = useState<'all' | 'stray' | 'pet' | 'rated' | 'completed' | 'active'>('all');
+
+  // Search & Filter State (Safety Reports Tab)
+  const [reportSearchQuery, setReportSearchQuery] = useState('');
+  const [reportFilterTag, setReportFilterTag] = useState<'all' | 'pending' | 'resolved' | 'dismissed'>('all');
 
   // Termination Modal State
   const [terminationModalVisible, setTerminationModalVisible] = useState(false);
@@ -539,14 +547,18 @@ export default function AdminHomeScreen({ route }: AdminHomeScreenProps = {}) {
         </View>
 
         {/* Reporter & Doctor info */}
-        <View style={{ flexDirection: 'row', marginBottom: 4 }}>
+        <View style={{ flexDirection: 'row', marginBottom: 4, flexWrap: 'wrap' }}>
           <Text style={{ fontSize: 13, fontWeight: '600', color: theme.textSecondary }}>Reporter: </Text>
-          <Text style={{ fontSize: 13, fontWeight: '500', color: theme.text }}>{reporterName}</Text>
+          <Text style={{ fontSize: 13, fontWeight: '500', color: theme.text }}>
+            {reporterName} {item.userId?.email ? `(${item.userId.email})` : ''}
+          </Text>
         </View>
 
-        <View style={{ flexDirection: 'row', marginBottom: 4 }}>
+        <View style={{ flexDirection: 'row', marginBottom: 4, flexWrap: 'wrap' }}>
           <Text style={{ fontSize: 13, fontWeight: '600', color: theme.textSecondary }}>Doctor: </Text>
-          <Text style={{ fontSize: 13, fontWeight: '500', color: theme.text }}>{doctorName}</Text>
+          <Text style={{ fontSize: 13, fontWeight: '500', color: theme.text }}>
+            {doctorName} {item.acceptedBy?.email ? `(${item.acceptedBy.email})` : ''}
+          </Text>
         </View>
 
         <View style={{ flexDirection: 'row', marginBottom: 6 }}>
@@ -606,6 +618,107 @@ export default function AdminHomeScreen({ route }: AdminHomeScreenProps = {}) {
     ? applications.filter(app => app.userId?.isDeleted === true)
     : applications.filter(app => app.isVerified && !app.userId?.isDeleted);
 
+  const filteredRequests = requests.filter((item) => {
+    const q = reqSearchQuery.trim().toLowerCase();
+
+    // Filter tag matching
+    if (reqFilterTag === 'stray' && item.animalCategory !== 'STRAY') return false;
+    if (reqFilterTag === 'pet' && item.animalCategory === 'STRAY') return false;
+    if (reqFilterTag === 'rated' && (!item.rating || !item.rating.score)) return false;
+    if (reqFilterTag === 'completed' && item.status !== 'COMPLETED') return false;
+    if (reqFilterTag === 'active' && !['ASSIGNED', 'IN_PROGRESS', 'OPEN'].includes(item.status)) return false;
+
+    // Search query matching
+    if (!q) return true;
+
+    const reporterFirstName = item.userId?.name?.first || '';
+    const reporterLastName = item.userId?.name?.last || '';
+    const reporterName = `${reporterFirstName} ${reporterLastName}`.trim() || item.userName || '';
+    const reporterEmail = item.userId?.email || '';
+    const reporterPhone = item.userId?.phone || item.userPhone || '';
+
+    const doctorFirstName = item.acceptedBy?.name?.first || '';
+    const doctorLastName = item.acceptedBy?.name?.last || '';
+    const doctorName = `${doctorFirstName} ${doctorLastName}`.trim() || item.mockDoctor?.name || '';
+    const doctorEmail = item.acceptedBy?.email || '';
+    const doctorPhone = item.acceptedBy?.phone || '';
+
+    const animalCategory = item.animalCategory === 'STRAY' ? 'stray street animal' : 'owned pet';
+    const petName = item.petId?.name || '';
+    const petSpecies = item.petId?.species || '';
+
+    const description = item.description || '';
+    const status = item.status || '';
+    const ratingScore = item.rating?.score ? `${item.rating.score}` : '';
+    const ratingText = item.rating?.score ? `${item.rating.score} star stars` : '';
+    const ratingReview = item.rating?.review || '';
+    const reqId = item._id || '';
+
+    const searchableString = [
+      reporterName,
+      reporterEmail,
+      reporterPhone,
+      doctorName,
+      doctorEmail,
+      doctorPhone,
+      animalCategory,
+      petName,
+      petSpecies,
+      description,
+      status,
+      ratingScore,
+      ratingText,
+      ratingReview,
+      reqId,
+    ].join(' ').toLowerCase();
+
+    return searchableString.includes(q);
+  });
+
+  const filteredReports = reports.filter((item) => {
+    const q = reportSearchQuery.trim().toLowerCase();
+
+    // Filter tag matching
+    if (reportFilterTag === 'pending' && item.status !== 'PENDING') return false;
+    if (reportFilterTag === 'resolved' && item.status !== 'RESOLVED') return false;
+    if (reportFilterTag === 'dismissed' && item.status !== 'DISMISSED') return false;
+
+    // Search query matching
+    if (!q) return true;
+
+    const reporterFirstName = item.reporterId?.name?.first || '';
+    const reporterLastName = item.reporterId?.name?.last || '';
+    const reporterName = `${reporterFirstName} ${reporterLastName}`.trim();
+    const reporterEmail = item.reporterId?.email || '';
+    const reporterRole = item.reporterRole || item.reporterId?.role || '';
+
+    const reportedFirstName = item.reportedId?.name?.first || '';
+    const reportedLastName = item.reportedId?.name?.last || '';
+    const reportedName = `${reportedFirstName} ${reportedLastName}`.trim();
+    const reportedEmail = item.reportedId?.email || '';
+    const reportedRole = item.reportedId?.role || '';
+
+    const categoryTag = (item.category || '').replace(/_/g, ' ');
+    const description = item.description || '';
+    const status = item.status || '';
+    const reqId = typeof item.requestId === 'object' ? item.requestId?._id : (item.requestId || '');
+
+    const searchableString = [
+      reporterName,
+      reporterEmail,
+      reporterRole,
+      reportedName,
+      reportedEmail,
+      reportedRole,
+      categoryTag,
+      description,
+      status,
+      reqId,
+    ].join(' ').toLowerCase();
+
+    return searchableString.includes(q);
+  });
+
   const renderReportCard = ({ item }: { item: any }) => {
     const reporterName = item.reporterId?.name
       ? `${item.reporterId.name.first} ${item.reporterId.name.last}`.trim()
@@ -656,7 +769,7 @@ export default function AdminHomeScreen({ route }: AdminHomeScreenProps = {}) {
         <View style={styles.qualSection}>
           <Text style={[styles.qualLabel, { color: theme.textSecondary }]}>Reporter: </Text>
           <Text style={[styles.qualText, { color: theme.text, fontWeight: 'bold' }]}>
-            {reporterName} ({reporterRole})
+            {reporterName} ({reporterRole}) {item.reporterId?.email ? `• ${item.reporterId.email}` : ''}
           </Text>
         </View>
 
@@ -664,7 +777,7 @@ export default function AdminHomeScreen({ route }: AdminHomeScreenProps = {}) {
         <View style={styles.qualSection}>
           <Text style={[styles.qualLabel, { color: theme.textSecondary }]}>Reported Target: </Text>
           <Text style={[styles.qualText, { color: '#EF4444', fontWeight: 'bold' }]}>
-            {reportedName} ({reportedRole})
+            {reportedName} ({reportedRole}) {item.reportedId?.email ? `• ${item.reportedId.email}` : ''}
           </Text>
         </View>
 
@@ -956,37 +1069,165 @@ export default function AdminHomeScreen({ route }: AdminHomeScreenProps = {}) {
           )}
         </View>
       ) : activeTab === 'requests' ? (
-        <FlatList
-          data={requests}
-          keyExtractor={(item) => item._id}
-          renderItem={renderRequestCard}
-          contentContainerStyle={styles.listContent}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-          ListEmptyComponent={
-            <View style={styles.emptyState}>
-              <Ionicons name="document-text-outline" size={48} color={theme.textSecondary} />
-              <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
-                No emergency requests logged yet.
-              </Text>
+        <View style={{ flex: 1 }}>
+          {/* Search Bar & Filter Chips for Emergency Requests */}
+          <View style={[styles.searchFilterContainer, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <View style={[styles.searchBar, { backgroundColor: theme.background, borderColor: theme.border }]}>
+              <Ionicons name="search-outline" size={18} color={theme.textSecondary} style={{ marginRight: 8 }} />
+              <TextInput
+                style={[styles.searchInput, { color: theme.text }]}
+                placeholder="Search user, doctor, email, stray/pet, rating (★)..."
+                placeholderTextColor={theme.textSecondary}
+                value={reqSearchQuery}
+                onChangeText={setReqSearchQuery}
+              />
+              {reqSearchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setReqSearchQuery('')} style={{ padding: 4 }}>
+                  <Ionicons name="close-circle" size={18} color={theme.textSecondary} />
+                </TouchableOpacity>
+              )}
             </View>
-          }
-        />
+
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsScroll}>
+              <TouchableOpacity
+                style={[styles.chip, reqFilterTag === 'all' && styles.chipActive]}
+                onPress={() => setReqFilterTag('all')}
+              >
+                <Text style={[styles.chipText, reqFilterTag === 'all' && styles.chipTextActive]}>All ({requests.length})</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.chip, reqFilterTag === 'stray' && styles.chipActive]}
+                onPress={() => setReqFilterTag('stray')}
+              >
+                <Ionicons name="paw" size={12} color={reqFilterTag === 'stray' ? '#FFF' : theme.primary} style={{ marginRight: 4 }} />
+                <Text style={[styles.chipText, reqFilterTag === 'stray' && styles.chipTextActive]}>Stray Animals</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.chip, reqFilterTag === 'pet' && styles.chipActive]}
+                onPress={() => setReqFilterTag('pet')}
+              >
+                <Ionicons name="heart" size={12} color={reqFilterTag === 'pet' ? '#FFF' : '#EC4899'} style={{ marginRight: 4 }} />
+                <Text style={[styles.chipText, reqFilterTag === 'pet' && styles.chipTextActive]}>Owned Pets</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.chip, reqFilterTag === 'rated' && styles.chipActive]}
+                onPress={() => setReqFilterTag('rated')}
+              >
+                <Ionicons name="star" size={12} color={reqFilterTag === 'rated' ? '#FFF' : '#F59E0B'} style={{ marginRight: 4 }} />
+                <Text style={[styles.chipText, reqFilterTag === 'rated' && styles.chipTextActive]}>With Rating (★)</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.chip, reqFilterTag === 'completed' && styles.chipActive]}
+                onPress={() => setReqFilterTag('completed')}
+              >
+                <Ionicons name="checkmark-circle" size={12} color={reqFilterTag === 'completed' ? '#FFF' : '#10B981'} style={{ marginRight: 4 }} />
+                <Text style={[styles.chipText, reqFilterTag === 'completed' && styles.chipTextActive]}>Completed</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.chip, reqFilterTag === 'active' && styles.chipActive]}
+                onPress={() => setReqFilterTag('active')}
+              >
+                <Ionicons name="time" size={12} color={reqFilterTag === 'active' ? '#FFF' : '#3B82F6'} style={{ marginRight: 4 }} />
+                <Text style={[styles.chipText, reqFilterTag === 'active' && styles.chipTextActive]}>Active / Open</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+
+          <FlatList
+            data={filteredRequests}
+            keyExtractor={(item) => item._id}
+            renderItem={renderRequestCard}
+            contentContainerStyle={styles.listContent}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+            ListEmptyComponent={
+              <View style={styles.emptyState}>
+                <Ionicons name="document-text-outline" size={48} color={theme.textSecondary} />
+                <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
+                  {reqSearchQuery || reqFilterTag !== 'all'
+                    ? 'No emergency requests match your search criteria.'
+                    : 'No emergency requests logged yet.'}
+                </Text>
+              </View>
+            }
+          />
+        </View>
       ) : activeTab === 'reports' ? (
-        <FlatList
-          data={reports}
-          keyExtractor={(item) => item._id}
-          renderItem={renderReportCard}
-          contentContainerStyle={styles.listContent}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-          ListEmptyComponent={
-            <View style={styles.emptyState}>
-              <Ionicons name="shield-checkmark-outline" size={48} color="#10B981" />
-              <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
-                No safety reports logged. System clean!
-              </Text>
+        <View style={{ flex: 1 }}>
+          {/* Search Bar & Filter Chips for Safety Reports */}
+          <View style={[styles.searchFilterContainer, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <View style={[styles.searchBar, { backgroundColor: theme.background, borderColor: theme.border }]}>
+              <Ionicons name="search-outline" size={18} color={theme.textSecondary} style={{ marginRight: 8 }} />
+              <TextInput
+                style={[styles.searchInput, { color: theme.text }]}
+                placeholder="Search reporter, doctor, email, issue tag..."
+                placeholderTextColor={theme.textSecondary}
+                value={reportSearchQuery}
+                onChangeText={setReportSearchQuery}
+              />
+              {reportSearchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setReportSearchQuery('')} style={{ padding: 4 }}>
+                  <Ionicons name="close-circle" size={18} color={theme.textSecondary} />
+                </TouchableOpacity>
+              )}
             </View>
-          }
-        />
+
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsScroll}>
+              <TouchableOpacity
+                style={[styles.chip, reportFilterTag === 'all' && styles.chipActive]}
+                onPress={() => setReportFilterTag('all')}
+              >
+                <Text style={[styles.chipText, reportFilterTag === 'all' && styles.chipTextActive]}>All ({reports.length})</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.chip, reportFilterTag === 'pending' && styles.chipActiveBelow]}
+                onPress={() => setReportFilterTag('pending')}
+              >
+                <Ionicons name="alert-circle" size={12} color={reportFilterTag === 'pending' ? '#FFF' : '#D97706'} style={{ marginRight: 4 }} />
+                <Text style={[styles.chipText, reportFilterTag === 'pending' && styles.chipTextActive]}>Pending ({reports.filter((r: any) => r.status === 'PENDING').length})</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.chip, reportFilterTag === 'resolved' && styles.chipActive]}
+                onPress={() => setReportFilterTag('resolved')}
+              >
+                <Ionicons name="checkmark-done" size={12} color={reportFilterTag === 'resolved' ? '#FFF' : '#10B981'} style={{ marginRight: 4 }} />
+                <Text style={[styles.chipText, reportFilterTag === 'resolved' && styles.chipTextActive]}>Resolved</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.chip, reportFilterTag === 'dismissed' && styles.chipActiveTerminated]}
+                onPress={() => setReportFilterTag('dismissed')}
+              >
+                <Ionicons name="close-circle" size={12} color={reportFilterTag === 'dismissed' ? '#FFF' : '#6B7280'} style={{ marginRight: 4 }} />
+                <Text style={[styles.chipText, reportFilterTag === 'dismissed' && styles.chipTextActive]}>Dismissed</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+
+          <FlatList
+            data={filteredReports}
+            keyExtractor={(item) => item._id}
+            renderItem={renderReportCard}
+            contentContainerStyle={styles.listContent}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+            ListEmptyComponent={
+              <View style={styles.emptyState}>
+                <Ionicons name="shield-checkmark-outline" size={48} color="#10B981" />
+                <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
+                  {reportSearchQuery || reportFilterTag !== 'all'
+                    ? 'No safety reports match your search criteria.'
+                    : 'No safety reports logged. System clean!'}
+                </Text>
+              </View>
+            }
+          />
+        </View>
       ) : (
         <ScrollView
           contentContainerStyle={styles.listContent}
