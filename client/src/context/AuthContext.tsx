@@ -6,6 +6,7 @@ interface AuthContextType {
   loading: boolean;
   login: (userData: any) => Promise<void>;
   logout: () => Promise<void>;
+  updateUser: (userData: any) => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType>({
@@ -13,6 +14,7 @@ export const AuthContext = createContext<AuthContextType>({
   loading: true,
   login: async () => {},
   logout: async () => {},
+  updateUser: async () => {},
 });
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
@@ -45,6 +47,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const updateUser = async (userData: any) => {
+    try {
+      setUser((prevUser: any) => {
+        const merged = { ...prevUser, ...userData };
+        AsyncStorage.setItem('user', JSON.stringify(merged));
+        return merged;
+      });
+    } catch (e) {
+      console.error('Failed to update user data', e);
+    }
+  };
+
   const logout = async () => {
     try {
       await AsyncStorage.removeItem('user');
@@ -57,7 +71,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

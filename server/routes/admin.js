@@ -10,7 +10,8 @@ const {
   getDoctorReviews,
   searchDoctors,
   getAllReports,
-  updateReportStatus
+  updateReportStatus,
+  issueWarningStrike
 } = require('../controllers/adminController');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -23,6 +24,7 @@ router.get('/doctor-applications', getPendingDoctors);
 router.get('/requests', getAllRequests);
 router.get('/reports', getAllReports);
 router.put('/reports/:id/status', updateReportStatus);
+router.post('/reports/:id/warn', issueWarningStrike);
 router.post('/doctor-applications/:userId/approve', approveDoctor);
 router.post('/doctor-applications/:userId/reject', rejectDoctor);
 router.post('/doctors/:userId/terminate', terminateDoctor);

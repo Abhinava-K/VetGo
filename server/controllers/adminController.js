@@ -21,6 +21,10 @@ exports.getAdminStats = async (req, res) => {
     const completedRequests = await Request.countDocuments({ status: 'COMPLETED' });
     const pendingReports = await Report.countDocuments({ status: 'PENDING' });
 
+    // Calculate total warning strikes issued across all users
+    const usersWithWarnings = await User.find({ warningCount: { $gt: 0 } }, 'warningCount');
+    const totalWarnings = usersWithWarnings.reduce((acc, u) => acc + (u.warningCount || 0), 0);
+
     res.json({
       totalUsers,
       totalDoctors,
@@ -28,7 +32,8 @@ exports.getAdminStats = async (req, res) => {
       totalRequests,
       openRequests,
       completedRequests,
-      pendingReports
+      pendingReports,
+      totalWarnings
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -302,6 +307,63 @@ exports.updateReportStatus = async (req, res) => {
     res.json({ message: `Report marked as ${status}`, report });
   } catch (error) {
     console.error('Error updating report status:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Issue Warning Strike on a report's target user or reporter (for false claims)
+// @route   POST /api/admin/reports/:id/warn
+exports.issueWarningStrike = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason, targetType = 'reported' } = req.body; // 'reported' or 'reporter'
+
+    if (!reason || !reason.trim()) {
+      return res.status(400).json({ message: 'Warning reason is required' });
+    }
+
+    const report = await Report.findById(id);
+    if (!report) {
+      return res.status(404).json({ message: 'Report not found' });
+    }
+
+    const targetUserId = targetType === 'reporter' ? report.reporterId : report.reportedId;
+
+    if (!targetUserId) {
+      return res.status(400).json({ message: `No ${targetType} user associated with this report` });
+    }
+
+    // Push warning strike to target user/doctor schema
+    const targetUser = await User.findById(targetUserId);
+    if (targetUser) {
+      if (!targetUser.warnings) targetUser.warnings = [];
+      targetUser.warnings.push({
+        reason: reason.trim(),
+        reportId: report._id,
+        issuedAt: new Date()
+      });
+      targetUser.warningCount = (targetUser.warningCount || 0) + 1;
+      await targetUser.save();
+    }
+
+    // Mark report as RESOLVED with adminNotes
+    const strikeTargetLabel = targetType === 'reporter' ? 'Reporter (False Claim)' : 'Reported Target';
+    report.status = 'RESOLVED';
+    report.adminNotes = `[WARNING STRIKE ISSUED TO ${strikeTargetLabel.toUpperCase()} (${targetUser ? `${targetUser.name.first} ${targetUser.name.last}` : ''})]: ${reason.trim()}`;
+    await report.save();
+
+    const updatedReport = await Report.findById(id)
+      .populate('reporterId', 'name email role warnings warningCount')
+      .populate('reportedId', 'name email role warnings warningCount')
+      .populate('requestId', 'description status photoUrl location createdAt');
+
+    res.json({
+      message: `Warning strike successfully issued to ${strikeTargetLabel}`,
+      report: updatedReport,
+      warningCount: targetUser ? targetUser.warningCount : 0
+    });
+  } catch (error) {
+    console.error('Error issuing warning strike:', error);
     res.status(500).json({ message: error.message });
   }
 };

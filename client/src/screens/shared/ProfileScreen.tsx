@@ -173,6 +173,14 @@ export default function ProfileScreen() {
           </Text>
         </View>
 
+        <View style={[styles.statCard, { backgroundColor: theme.surface, borderColor: (profile?.warningCount || 0) > 0 ? '#EF4444' : theme.border }]}>
+          <Ionicons name="alert-circle-outline" size={24} color={(profile?.warningCount || 0) > 0 ? '#EF4444' : theme.textSecondary} />
+          <Text style={[styles.statValue, { color: (profile?.warningCount || 0) > 0 ? '#EF4444' : theme.text }]}>
+            {profile?.warningCount || 0}
+          </Text>
+          <Text style={[styles.statLabel, { color: (profile?.warningCount || 0) > 0 ? '#EF4444' : theme.textSecondary }]}>Strikes</Text>
+        </View>
+
         {profile?.role === 'DOCTOR' && (
           <View style={[styles.statCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
             <Ionicons name="star-outline" size={24} color={theme.warning} />

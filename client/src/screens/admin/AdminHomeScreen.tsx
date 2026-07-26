@@ -78,6 +78,15 @@ export default function AdminHomeScreen({ route }: AdminHomeScreenProps = {}) {
   // Search & Filter State (Safety Reports Tab)
   const [reportSearchQuery, setReportSearchQuery] = useState('');
   const [reportFilterTag, setReportFilterTag] = useState<'all' | 'pending' | 'resolved' | 'dismissed'>('all');
+  const [reportSubTab, setReportSubTab] = useState<'doctor_on_user' | 'user_on_doctor'>('doctor_on_user');
+
+  // Warning Strike Modal State
+  const [warningModalVisible, setWarningModalVisible] = useState(false);
+  const [selectedWarnReportId, setSelectedWarnReportId] = useState<string | null>(null);
+  const [selectedWarnReportedName, setSelectedWarnReportedName] = useState('');
+  const [selectedWarnReporterName, setSelectedWarnReporterName] = useState('');
+  const [warnTargetType, setWarnTargetType] = useState<'reported' | 'reporter'>('reported');
+  const [warningReason, setWarningReason] = useState('');
 
   // Termination Modal State
   const [terminationModalVisible, setTerminationModalVisible] = useState(false);
@@ -125,11 +134,11 @@ export default function AdminHomeScreen({ route }: AdminHomeScreenProps = {}) {
     const stars = [];
     for (let i = 1; i <= 5; i++) {
       stars.push(
-        <Ionicons 
-          key={i} 
-          name={i <= score ? 'star' : 'star-outline'} 
-          size={14} 
-          color="#F59E0B" 
+        <Ionicons
+          key={i}
+          name={i <= score ? 'star' : 'star-outline'}
+          size={14}
+          color="#F59E0B"
           style={{ marginRight: 2 }}
         />
       );
@@ -233,6 +242,29 @@ export default function AdminHomeScreen({ route }: AdminHomeScreenProps = {}) {
       loadAdminData();
     } catch (error: any) {
       Alert.alert('Error', error.response?.data?.message || 'Failed to update report');
+    }
+  };
+
+  const handleIssueWarningStrike = async () => {
+    if (!selectedWarnReportId) return;
+    if (!warningReason.trim()) {
+      Alert.alert('Required', 'Please enter a reason for issuing this warning strike.');
+      return;
+    }
+
+    const targetName = warnTargetType === 'reported' ? selectedWarnReportedName : selectedWarnReporterName;
+
+    try {
+      await api.post(`/admin/reports/${selectedWarnReportId}/warn`, {
+        reason: warningReason.trim(),
+        targetType: warnTargetType,
+      });
+      Alert.alert('Warning Strike Issued', `Warning strike successfully issued to ${targetName}.`);
+      setWarningModalVisible(false);
+      setWarningReason('');
+      loadAdminData();
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.message || 'Failed to issue warning strike');
     }
   };
 
@@ -504,12 +536,12 @@ export default function AdminHomeScreen({ route }: AdminHomeScreenProps = {}) {
     const isCompleted = item.status === 'COMPLETED';
     const isCancelled = item.status === 'CANCELLED';
     const isActive = item.status === 'ASSIGNED' || item.status === 'IN_PROGRESS' || item.status === 'OPEN';
-    
-    const statusColor = isCompleted 
-      ? '#10B981' 
-      : isCancelled 
-      ? '#EF4444' 
-      : '#3B82F6';
+
+    const statusColor = isCompleted
+      ? '#10B981'
+      : isCancelled
+        ? '#EF4444'
+        : '#3B82F6';
 
     const reporterName = item.userId?.name
       ? `${item.userId.name.first} ${item.userId.name.last}`.trim()
@@ -519,16 +551,16 @@ export default function AdminHomeScreen({ route }: AdminHomeScreenProps = {}) {
       ? `Dr. ${item.acceptedBy.name.first} ${item.acceptedBy.name.last}`.trim()
       : item.mockDoctor?.name || 'Unassigned';
 
-    const animalLabel = item.animalCategory === 'STRAY' 
-      ? 'Stray / Street Animal' 
-      : item.petId?.name 
-      ? `Pet: ${item.petId.name} (${item.petId.species})`
-      : 'Owned Pet';
+    const animalLabel = item.animalCategory === 'STRAY'
+      ? 'Stray / Street Animal'
+      : item.petId?.name
+        ? `Pet: ${item.petId.name} (${item.petId.species})`
+        : 'Owned Pet';
 
     const photoUrl = getImageUrl(item.photoUrl);
 
     return (
-      <TouchableOpacity 
+      <TouchableOpacity
         style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}
         onPress={() => setSelectedTranscriptCase(item)}
         activeOpacity={0.88}
@@ -676,14 +708,17 @@ export default function AdminHomeScreen({ route }: AdminHomeScreenProps = {}) {
   });
 
   const filteredReports = reports.filter((item) => {
-    const q = reportSearchQuery.trim().toLowerCase();
+    // 1. Sub-Tab filter: Doctor on User vs User on Doctor
+    if (reportSubTab === 'doctor_on_user' && item.reporterRole !== 'DOCTOR') return false;
+    if (reportSubTab === 'user_on_doctor' && item.reporterRole !== 'USER') return false;
 
-    // Filter tag matching
+    // 2. Filter tag matching
     if (reportFilterTag === 'pending' && item.status !== 'PENDING') return false;
     if (reportFilterTag === 'resolved' && item.status !== 'RESOLVED') return false;
     if (reportFilterTag === 'dismissed' && item.status !== 'DISMISSED') return false;
 
-    // Search query matching
+    // 3. Search query matching
+    const q = reportSearchQuery.trim().toLowerCase();
     if (!q) return true;
 
     const reporterFirstName = item.reporterId?.name?.first || '';
@@ -805,22 +840,45 @@ export default function AdminHomeScreen({ route }: AdminHomeScreenProps = {}) {
 
         {/* Action buttons */}
         {isPending && (
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 }}>
+          <View style={{ marginTop: 12 }}>
             <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: '#10B981', flex: 1, marginRight: 6, paddingVertical: 10, borderRadius: 8, alignItems: 'center' }]}
-              onPress={() => handleUpdateReportStatus(item._id, 'RESOLVED')}
+              style={[styles.actionBtn, { backgroundColor: '#DC2626', paddingVertical: 10, borderRadius: 8, alignItems: 'center', marginBottom: 8 }]}
+              onPress={() => {
+                setSelectedWarnReportId(item._id);
+                setSelectedWarnReportedName(reportedName);
+                setSelectedWarnReporterName(reporterName);
+                setWarnTargetType('reported');
+                setWarningReason('');
+                setWarningModalVisible(true);
+              }}
             >
-              <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 13 }}>Mark Resolved</Text>
+              <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 13 }}>⚠️ Issue Warning Strike</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: '#6B7280', flex: 1, marginLeft: 6, paddingVertical: 10, borderRadius: 8, alignItems: 'center' }]}
-              onPress={() => handleUpdateReportStatus(item._id, 'DISMISSED')}
-            >
-              <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 13 }}>Dismiss</Text>
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <TouchableOpacity
+                style={[styles.actionBtn, { backgroundColor: '#10B981', flex: 1, marginRight: 4, paddingVertical: 8, borderRadius: 8, alignItems: 'center' }]}
+                onPress={() => handleUpdateReportStatus(item._id, 'RESOLVED')}
+              >
+                <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 12 }}>Mark Resolved</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.actionBtn, { backgroundColor: '#6B7280', flex: 1, marginLeft: 4, paddingVertical: 8, borderRadius: 8, alignItems: 'center' }]}
+                onPress={() => handleUpdateReportStatus(item._id, 'DISMISSED')}
+              >
+                <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 12 }}>Dismiss</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
+
+        {item.adminNotes ? (
+          <View style={{ backgroundColor: `${theme.primary}10`, borderWidth: 1, borderColor: theme.primary, borderRadius: 8, padding: 8, marginTop: 8 }}>
+            <Text style={{ fontSize: 11, fontWeight: 'bold', color: theme.primary }}>ADMIN RESOLUTION NOTES:</Text>
+            <Text style={{ fontSize: 12, color: theme.text, marginTop: 2 }}>{item.adminNotes}</Text>
+          </View>
+        ) : null}
 
         {/* View Full Case Record & Transcript Button */}
         {item.requestId ? (
@@ -1158,6 +1216,27 @@ export default function AdminHomeScreen({ route }: AdminHomeScreenProps = {}) {
         </View>
       ) : activeTab === 'reports' ? (
         <View style={{ flex: 1 }}>
+          {/* Sub-tabs segment selector for Safety Reports */}
+          <View style={[styles.subTabsRow, { borderBottomColor: theme.border, backgroundColor: theme.surface }]}>
+            <TouchableOpacity
+              style={[styles.subTabItem, reportSubTab === 'doctor_on_user' && { borderBottomColor: '#EF4444', borderBottomWidth: 2 }]}
+              onPress={() => setReportSubTab('doctor_on_user')}
+            >
+              <Text style={[styles.subTabText, { color: reportSubTab === 'doctor_on_user' ? '#EF4444' : theme.textSecondary, fontWeight: reportSubTab === 'doctor_on_user' ? 'bold' : 'normal' }]}>
+                Doctor Reports ({reports.filter((r: any) => r.reporterRole === 'DOCTOR').length})
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.subTabItem, reportSubTab === 'user_on_doctor' && { borderBottomColor: '#EF4444', borderBottomWidth: 2 }]}
+              onPress={() => setReportSubTab('user_on_doctor')}
+            >
+              <Text style={[styles.subTabText, { color: reportSubTab === 'user_on_doctor' ? '#EF4444' : theme.textSecondary, fontWeight: reportSubTab === 'user_on_doctor' ? 'bold' : 'normal' }]}>
+                User Reports ({reports.filter((r: any) => r.reporterRole === 'USER').length})
+              </Text>
+            </TouchableOpacity>
+          </View>
+
           {/* Search Bar & Filter Chips for Safety Reports */}
           <View style={[styles.searchFilterContainer, { backgroundColor: theme.surface, borderColor: theme.border }]}>
             <View style={[styles.searchBar, { backgroundColor: theme.background, borderColor: theme.border }]}>
@@ -1263,9 +1342,110 @@ export default function AdminHomeScreen({ route }: AdminHomeScreenProps = {}) {
               <Text style={[styles.statValue, { color: theme.text }]}>{stats?.pendingReports || 0}</Text>
               <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Pending Safety Reports</Text>
             </View>
+
+            <View style={[styles.statCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+              <Ionicons name="warning" size={28} color="#DC2626" />
+              <Text style={[styles.statValue, { color: theme.text }]}>{stats?.totalWarnings || 0}</Text>
+              <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Warning Strikes Issued</Text>
+            </View>
           </View>
         </ScrollView>
       )}
+
+      {/* Warning Strike Reason Input Modal */}
+      <Modal
+        visible={warningModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setWarningModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <Text style={[styles.modalTitle, { color: theme.text }]}>Issue Warning Strike</Text>
+
+            <Text style={[styles.modalLabel, { color: theme.textSecondary, marginBottom: 8 }]}>
+              Who is at fault and should receive the warning strike?
+            </Text>
+
+            {/* Target Selector Toggle Buttons */}
+            <View style={{ flexDirection: 'row', marginBottom: 14 }}>
+              <TouchableOpacity
+                style={{
+                  flex: 1,
+                  paddingVertical: 10,
+                  paddingHorizontal: 8,
+                  borderRadius: 10,
+                  borderWidth: 1.5,
+                  borderColor: warnTargetType === 'reported' ? '#DC2626' : theme.border,
+                  backgroundColor: warnTargetType === 'reported' ? '#FEE2E2' : theme.background,
+                  marginRight: 6,
+                  alignItems: 'center',
+                }}
+                onPress={() => setWarnTargetType('reported')}
+              >
+                <Text style={{ fontSize: 12, fontWeight: 'bold', color: warnTargetType === 'reported' ? '#DC2626' : theme.text }}>
+                  Reported Target
+                </Text>
+                <Text style={{ fontSize: 12, fontWeight: 'bold', color: warnTargetType === 'reported' ? '#000000' : theme.text, marginTop: 3 }} numberOfLines={1}>
+                  {selectedWarnReportedName}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={{
+                  flex: 1,
+                  paddingVertical: 10,
+                  paddingHorizontal: 8,
+                  borderRadius: 10,
+                  borderWidth: 1.5,
+                  borderColor: warnTargetType === 'reporter' ? '#DC2626' : theme.border,
+                  backgroundColor: warnTargetType === 'reporter' ? '#FEE2E2' : theme.background,
+                  marginLeft: 6,
+                  alignItems: 'center',
+                }}
+                onPress={() => setWarnTargetType('reporter')}
+              >
+                <Text style={{ fontSize: 12, fontWeight: 'bold', color: warnTargetType === 'reporter' ? '#DC2626' : theme.text }}>
+                  Reporter (False Claim)
+                </Text>
+                <Text style={{ fontSize: 12, fontWeight: 'bold', color: warnTargetType === 'reporter' ? '#000000' : theme.text, marginTop: 3 }} numberOfLines={1}>
+                  {selectedWarnReporterName}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={[styles.modalLabel, { color: theme.textSecondary, marginBottom: 6 }]}>
+              Official reasoning for strike against <Text style={{ fontWeight: 'bold', color: '#DC2626' }}>{warnTargetType === 'reported' ? selectedWarnReportedName : selectedWarnReporterName}</Text>:
+            </Text>
+
+            <TextInput
+              style={[styles.modalInput, { backgroundColor: theme.background, color: theme.text, borderColor: theme.border }]}
+              placeholder={warnTargetType === 'reported' ? "e.g. Repeated no-show, abusive behavior, misconduct..." : "e.g. False report submission, retaliatory claim..."}
+              placeholderTextColor={theme.textSecondary}
+              multiline={true}
+              numberOfLines={4}
+              value={warningReason}
+              onChangeText={setWarningReason}
+            />
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalBtn, styles.modalBtnCancel, { borderColor: theme.border }]}
+                onPress={() => setWarningModalVisible(false)}
+              >
+                <Text style={[styles.modalBtnTextCancel, { color: theme.text }]}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalBtn, styles.modalBtnSubmit, { backgroundColor: '#DC2626' }]}
+                onPress={handleIssueWarningStrike}
+              >
+                <Text style={styles.modalBtnTextSubmit}>Issue Strike</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Termination Reason Input Modal */}
       <Modal
@@ -1407,11 +1587,11 @@ export default function AdminHomeScreen({ route }: AdminHomeScreenProps = {}) {
                 {/* Status & Date */}
                 <View style={styles.tsStatusRow}>
                   <View style={[
-                    styles.tsStatusBadge, 
+                    styles.tsStatusBadge,
                     { backgroundColor: selectedTranscriptCase.status === 'COMPLETED' ? '#10B9811A' : '#EF44441A' }
                   ]}>
                     <Text style={[
-                      styles.tsStatusText, 
+                      styles.tsStatusText,
                       { color: selectedTranscriptCase.status === 'COMPLETED' ? '#10B981' : '#EF4444' }
                     ]}>
                       {selectedTranscriptCase.status}
@@ -1445,7 +1625,7 @@ export default function AdminHomeScreen({ route }: AdminHomeScreenProps = {}) {
                       )}
                     </View>
                     {(selectedTranscriptCase.userId?.phone || selectedTranscriptCase.userPhone) && (
-                      <TouchableOpacity 
+                      <TouchableOpacity
                         style={[styles.tsCallBtn, { backgroundColor: theme.primary }]}
                         onPress={() => handleCallUser(selectedTranscriptCase.userId?.phone || selectedTranscriptCase.userPhone)}
                       >
@@ -1479,7 +1659,7 @@ export default function AdminHomeScreen({ route }: AdminHomeScreenProps = {}) {
                       )}
                     </View>
                     {selectedTranscriptCase.acceptedBy?.phone && (
-                      <TouchableOpacity 
+                      <TouchableOpacity
                         style={[styles.tsCallBtn, { backgroundColor: '#10B981' }]}
                         onPress={() => handleCallUser(selectedTranscriptCase.acceptedBy.phone)}
                       >
@@ -1504,8 +1684,8 @@ export default function AdminHomeScreen({ route }: AdminHomeScreenProps = {}) {
                       {selectedTranscriptCase.animalCategory === 'STRAY'
                         ? 'Stray / Street Animal'
                         : selectedTranscriptCase.petId?.name
-                        ? `Owned Pet: ${selectedTranscriptCase.petId.name} (${selectedTranscriptCase.petId.species})`
-                        : 'Owned Pet'}
+                          ? `Owned Pet: ${selectedTranscriptCase.petId.name} (${selectedTranscriptCase.petId.species})`
+                          : 'Owned Pet'}
                     </Text>
                   </View>
                 </View>
@@ -1521,7 +1701,7 @@ export default function AdminHomeScreen({ route }: AdminHomeScreenProps = {}) {
                           Lat: {selectedTranscriptCase.location.coordinates[1]?.toFixed(4)}, Lng: {selectedTranscriptCase.location.coordinates[0]?.toFixed(4)}
                         </Text>
                       </View>
-                      <TouchableOpacity 
+                      <TouchableOpacity
                         style={styles.tsMapBtn}
                         onPress={() => handleOpenMap(selectedTranscriptCase.location.coordinates)}
                       >
@@ -1536,7 +1716,7 @@ export default function AdminHomeScreen({ route }: AdminHomeScreenProps = {}) {
                 {getImageUrl(selectedTranscriptCase.photoUrl) && (
                   <View style={[styles.tsSectionCard, { backgroundColor: theme.background, borderColor: theme.border }]}>
                     <Text style={[styles.tsSectionHeading, { color: theme.textSecondary }]}>INJURY PHOTO</Text>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={styles.tsPhotoContainer}
                       onPress={() => setZoomImage(getImageUrl(selectedTranscriptCase.photoUrl))}
                       activeOpacity={0.9}
@@ -1591,16 +1771,16 @@ export default function AdminHomeScreen({ route }: AdminHomeScreenProps = {}) {
         onRequestClose={() => setZoomImage(null)}
       >
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.95)', justifyContent: 'center', alignItems: 'center' }}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={{ position: 'absolute', top: 50, right: 20, zIndex: 10 }}
             onPress={() => setZoomImage(null)}
           >
             <Ionicons name="close-circle" size={36} color="#FFFFFF" />
           </TouchableOpacity>
           {zoomImage && (
-            <Image 
-              source={{ uri: zoomImage }} 
-              style={{ width: '92%', height: '75%' }} 
+            <Image
+              source={{ uri: zoomImage }}
+              style={{ width: '92%', height: '75%' }}
               resizeMode="contain"
             />
           )}

@@ -217,7 +217,12 @@ exports.logout = (req, res) => {
 // @route   GET /api/auth/me
 exports.getMe = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select('-passwordHash');
+    const user = await User.findById(req.user.id)
+      .select('-passwordHash')
+      .populate({
+        path: 'warnings.reportId',
+        select: 'category description createdAt adminNotes'
+      });
     if (!user) return res.status(404).json({ message: 'User not found' });
 
     const phone = user.phoneEncrypted ? decryptField(user.phoneEncrypted) : '';
@@ -229,6 +234,8 @@ exports.getMe = async (req, res) => {
       phone,
       role: user.role,
       location: user.location,
+      warningCount: user.warningCount || 0,
+      warnings: user.warnings || [],
       createdAt: user.createdAt
     });
   } catch (error) {
@@ -318,6 +325,38 @@ exports.deleteAccount = async (req, res) => {
     res.json({ message: 'Account and personal data processed successfully.' });
   } catch (error) {
     console.error('[AUTH] Delete account error:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Acknowledge a warning strike
+// @route   POST /api/auth/warnings/:warningId/acknowledge
+exports.acknowledgeWarning = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const warning = user.warnings.id(req.params.warningId);
+    if (!warning) return res.status(404).json({ message: 'Warning strike not found' });
+
+    warning.acknowledged = true;
+    warning.acknowledgedAt = new Date();
+    await user.save();
+
+    const updatedUser = await User.findById(req.user.id)
+      .select('-passwordHash')
+      .populate({
+        path: 'warnings.reportId',
+        select: 'category description createdAt adminNotes'
+      });
+
+    res.json({
+      message: 'Warning strike acknowledged',
+      warningCount: updatedUser.warningCount || 0,
+      warnings: updatedUser.warnings || []
+    });
+  } catch (error) {
+    console.error('[AUTH] Acknowledge warning error:', error);
     res.status(500).json({ message: error.message });
   }
 };

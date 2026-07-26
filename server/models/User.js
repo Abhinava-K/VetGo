@@ -15,6 +15,17 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  warnings: [{
+    reason: { type: String, required: true },
+    reportId: { type: mongoose.Schema.Types.ObjectId, ref: 'Report' },
+    issuedAt: { type: Date, default: Date.now },
+    acknowledged: { type: Boolean, default: false },
+    acknowledgedAt: { type: Date }
+  }],
+  warningCount: {
+    type: Number,
+    default: 0
+  },
   name: {
     first: { type: String, required: true },
     last: { type: String, required: true }

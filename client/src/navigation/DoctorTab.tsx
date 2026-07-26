@@ -11,11 +11,13 @@ import { ThemeContext } from '../context/ThemeContext';
 import { AuthContext } from '../context/AuthContext';
 import api from '../services/api';
 
+import WarningStrikeModal from '../components/common/WarningStrikeModal';
+
 const Tab = createBottomTabNavigator();
 
 export default function DoctorTab() {
   const { theme } = useContext(ThemeContext);
-  const { logout } = useContext(AuthContext);
+  const { user, updateUser, logout } = useContext(AuthContext);
   const insets = useSafeAreaInsets();
   
   const [profile, setProfile] = useState<any>(null);
@@ -25,12 +27,30 @@ export default function DoctorTab() {
     try {
       const { data } = await api.get('/doctors/profile');
       setProfile(data);
+      const meRes = await api.get('/auth/me');
+      if (meRes.data) {
+        updateUser(meRes.data);
+      }
     } catch (error) {
       console.error('Error loading doctor status in tab:', error);
     } finally {
       setLoading(false);
     }
   };
+
+  const handleAcknowledgeStrike = async (warningId: string) => {
+    const res = await api.post(`/auth/warnings/${warningId}/acknowledge`);
+    if (res.data) {
+      updateUser({
+        warningCount: res.data.warningCount,
+        warnings: res.data.warnings
+      });
+    }
+  };
+
+  const unackWarning = user?.warnings?.find((w: any) => !w.acknowledged);
+  const totalStrikes = user?.warningCount || user?.warnings?.length || 0;
+  const strikeNumber = unackWarning && user?.warnings ? user.warnings.findIndex((w: any) => w._id === unackWarning._id) + 1 : 1;
 
   useEffect(() => {
     fetchDoctorProfile();
@@ -92,17 +112,29 @@ export default function DoctorTab() {
   }
 
   return (
-    <Tab.Navigator
-      tabBar={(props) => <AnimatedTabBar {...props} />}
-      screenOptions={{
-        headerShown: false,
-        sceneStyle: { paddingBottom: 70 },
-      }}
-    >
-      <Tab.Screen name="DoctorHome" component={DoctorHomeScreen} options={{ title: 'Alerts' }} />
-      <Tab.Screen name="DoctorHistory" component={DoctorHistoryScreen} options={{ title: 'History' }} />
-      <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: 'Profile' }} />
-    </Tab.Navigator>
+    <>
+      <Tab.Navigator
+        tabBar={(props) => <AnimatedTabBar {...props} />}
+        screenOptions={{
+          headerShown: false,
+          sceneStyle: { paddingBottom: 70 },
+        }}
+      >
+        <Tab.Screen name="DoctorHome" component={DoctorHomeScreen} options={{ title: 'Alerts' }} />
+        <Tab.Screen name="DoctorHistory" component={DoctorHistoryScreen} options={{ title: 'History' }} />
+        <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: 'Profile' }} />
+      </Tab.Navigator>
+
+      {unackWarning && (
+        <WarningStrikeModal
+          visible={!!unackWarning}
+          warning={unackWarning}
+          strikeNumber={strikeNumber}
+          totalStrikes={totalStrikes}
+          onAcknowledge={handleAcknowledgeStrike}
+        />
+      )}
+    </>
   );
 }
 
