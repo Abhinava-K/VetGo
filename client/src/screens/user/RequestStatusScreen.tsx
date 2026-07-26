@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { 
-  StyleSheet, 
-  View, 
-  Text, 
-  TouchableOpacity, 
-  Linking, 
+import {
+  StyleSheet,
+  View,
+  Text,
+  TouchableOpacity,
+  Linking,
   ActivityIndicator,
   Modal,
   TextInput,
-  Alert 
+  Alert
 } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useRoute, useNavigation } from '@react-navigation/native';
@@ -29,7 +29,7 @@ export default function RequestStatusScreen() {
   const [rating, setRating] = useState(5);
   const [review, setReview] = useState('');
   const [reportModalVisible, setReportModalVisible] = useState(false);
-  
+
   const { theme } = useContext(ThemeContext);
   const socket = getSocket();
 
@@ -52,7 +52,7 @@ export default function RequestStatusScreen() {
       socket.on('request:accepted', (data) => {
         setRequest((prev: any) => ({ ...prev, status: 'ASSIGNED', doctor: data }));
       });
-      
+
       socket.on('doctor:location', (data) => {
         setDoctorLoc({ latitude: data.lat, longitude: data.lng });
       });
@@ -98,7 +98,7 @@ export default function RequestStatusScreen() {
           longitudeDelta: 0.05,
         }}
       >
-        <Marker 
+        <Marker
           coordinate={{
             latitude: request.location.coordinates[1],
             longitude: request.location.coordinates[0]
@@ -106,7 +106,7 @@ export default function RequestStatusScreen() {
           title="Your Location"
         />
         {doctorLoc && (
-          <Marker 
+          <Marker
             coordinate={doctorLoc}
             title="Doctor"
             pinColor={theme.secondary}
@@ -116,21 +116,21 @@ export default function RequestStatusScreen() {
 
       <View style={[styles.infoCard, { backgroundColor: theme.surface }]}>
         <Text style={[styles.status, { color: theme.primary }]}>{request.status}</Text>
-        
+
         {request.status === 'OPEN' ? (
           <Text style={{ color: theme.textSecondary }}>Waiting for a doctor to accept your request...</Text>
         ) : (
           <View>
             <Text style={[styles.docName, { color: theme.text }]}>
-              {request.doctor?.doctorName || 
-                (request.acceptedBy?.name ? `Dr. ${request.acceptedBy.name.first} ${request.acceptedBy.name.last}` : null) || 
-                request.mockDoctor?.name || 
+              {request.doctor?.doctorName ||
+                (request.acceptedBy?.name ? `Dr. ${request.acceptedBy.name.first} ${request.acceptedBy.name.last}` : null) ||
+                request.mockDoctor?.name ||
                 'Doctor Assigned'}
             </Text>
             <Text style={{ color: theme.textSecondary, marginTop: 2 }}>
               {request.doctor?.qualification || request.mockDoctor?.qualification || 'Veterinary Specialist'}
             </Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.callBtn, { backgroundColor: theme.primary }]}
               onPress={() => {
                 const phone = request.doctor?.phone || request.doctorPhone || request.mockDoctor?.phone;
@@ -145,14 +145,14 @@ export default function RequestStatusScreen() {
             </TouchableOpacity>
 
             {(request.status === 'ASSIGNED' || request.status === 'IN_PROGRESS') && (
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.completeBtn, { backgroundColor: theme.secondary, marginTop: 10 }]}
                 onPress={() => setRatingModal(true)}
               >
                 <Text style={styles.completeBtnText}>Complete & Rate Service</Text>
               </TouchableOpacity>
             )}
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.reportBtn, { marginTop: 10 }]}
               onPress={() => setReportModalVisible(true)}
             >
@@ -167,7 +167,7 @@ export default function RequestStatusScreen() {
           <View style={[styles.modalContent, { backgroundColor: theme.surface }]}>
             <Text style={[styles.modalTitle, { color: theme.text }]}>Rate the Service</Text>
             <View style={styles.stars}>
-              {[1,2,3,4,5].map(s => (
+              {[1, 2, 3, 4, 5].map(s => (
                 <TouchableOpacity key={s} onPress={() => setRating(s)}>
                   <Text style={{ fontSize: 30 }}>{s <= rating ? '⭐' : '☆'}</Text>
                 </TouchableOpacity>
@@ -181,7 +181,7 @@ export default function RequestStatusScreen() {
               onChangeText={setReview}
               multiline
             />
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.submitBtn, { backgroundColor: theme.primary }]}
               onPress={handleCompleteAndRate}
             >

@@ -9,10 +9,10 @@ exports.getAdminStats = async (req, res) => {
   try {
     const totalUsers = await User.countDocuments({ role: 'USER' });
     const totalDoctors = await User.countDocuments({ role: 'DOCTOR' });
-    
+
     // Count pending doctor profiles
     const allProfiles = await DoctorProfile.find();
-    const pendingDoctors = allProfiles.filter(p => 
+    const pendingDoctors = allProfiles.filter(p =>
       p.docs && p.docs.some(d => d.status === 'PENDING')
     ).length;
 
@@ -71,7 +71,7 @@ exports.approveDoctor = async (req, res) => {
     const { userId } = req.params;
 
     // 1. Update User role to DOCTOR and clear deleted status/reason
-    const user = await User.findByIdAndUpdate(userId, { 
+    const user = await User.findByIdAndUpdate(userId, {
       role: 'DOCTOR',
       isDeleted: false,
       terminationReason: ''
@@ -122,7 +122,7 @@ exports.terminateDoctor = async (req, res) => {
     const { userId } = req.params;
     const { reason } = req.body;
 
-    const user = await User.findByIdAndUpdate(userId, { 
+    const user = await User.findByIdAndUpdate(userId, {
       isDeleted: true,
       terminationReason: reason || 'Violation of platform guidelines'
     }, { new: true });
@@ -151,18 +151,18 @@ exports.getDoctorReviews = async (req, res) => {
       acceptedBy: doctorId,
       'rating.score': { $exists: true }
     })
-    .select('rating createdAt userId')
-    .populate('userId', 'name')
-    .sort({ createdAt: -1 })
-    .limit(50); // Optimization: Limit to recent 50 reviews to minimize DB overhead
+      .select('rating createdAt userId')
+      .populate('userId', 'name')
+      .sort({ createdAt: -1 })
+      .limit(50); // Optimization: Limit to recent 50 reviews to minimize DB overhead
 
     const formattedReviews = reviews.map(r => ({
       _id: r._id,
       score: r.rating.score,
       review: r.rating.review || '',
       createdAt: r.createdAt,
-      userName: r.userId?.name 
-        ? `${r.userId.name.first} ${r.userId.name.last}` 
+      userName: r.userId?.name
+        ? `${r.userId.name.first} ${r.userId.name.last}`
         : 'Anonymous Reporter'
     }));
 

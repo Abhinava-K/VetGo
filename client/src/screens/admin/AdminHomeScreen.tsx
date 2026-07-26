@@ -11,6 +11,9 @@ import {
   ScrollView,
   Modal,
   TextInput,
+  Image,
+  Linking,
+  Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -79,6 +82,52 @@ export default function AdminHomeScreen({ route }: AdminHomeScreenProps = {}) {
   const [doctorReviews, setDoctorReviews] = useState<any[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [selectedDoctorReviewsName, setSelectedDoctorReviewsName] = useState('');
+
+  // Case Transcript Modal State
+  const [selectedTranscriptCase, setSelectedTranscriptCase] = useState<any | null>(null);
+  const [zoomImage, setZoomImage] = useState<string | null>(null);
+
+  const getImageUrl = (path?: string) => {
+    if (!path) return null;
+    if (path.startsWith('http')) return path;
+    const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+    const baseURL = api.defaults.baseURL?.replace(/\/api\/?$/, '') || 'http://localhost:4000';
+    return `${baseURL}/${cleanPath}`;
+  };
+
+  const handleCallUser = (phone?: string) => {
+    if (!phone) {
+      Alert.alert('No Phone Number', 'No phone number is available.');
+      return;
+    }
+    Linking.openURL(`tel:${phone}`);
+  };
+
+  const handleOpenMap = (coords?: number[]) => {
+    if (!coords || coords.length < 2) return;
+    const [lng, lat] = coords;
+    const url = Platform.select({
+      ios: `maps:0,0?q=${lat},${lng}`,
+      android: `geo:0,0?q=${lat},${lng}`,
+    }) || `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+    Linking.openURL(url);
+  };
+
+  const renderStars = (score: number) => {
+    const stars = [];
+    for (let i = 1; i <= 5; i++) {
+      stars.push(
+        <Ionicons 
+          key={i} 
+          name={i <= score ? 'star' : 'star-outline'} 
+          size={14} 
+          color="#F59E0B" 
+          style={{ marginRight: 2 }}
+        />
+      );
+    }
+    return <View style={{ flexDirection: 'row', alignItems: 'center' }}>{stars}</View>;
+  };
 
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
@@ -306,8 +355,8 @@ export default function AdminHomeScreen({ route }: AdminHomeScreenProps = {}) {
             {item.docs.map((doc: any, index: number) => {
               const fileUrl = `${api.defaults.baseURL?.replace('/api', '')}/uploads/doctorDocs/${doc.filename}`;
               return (
-                <TouchableOpacity 
-                  key={index} 
+                <TouchableOpacity
+                  key={index}
                   style={[styles.docItem, { backgroundColor: theme.background, borderColor: theme.border }]}
                   onPress={() => {
                     import('react-native').then(({ Linking }) => {
@@ -331,7 +380,7 @@ export default function AdminHomeScreen({ route }: AdminHomeScreenProps = {}) {
         {!isApproved && item.userId?._id && (
           <View style={styles.actionColumn}>
             <View style={{ marginBottom: 8, marginTop: 14 }}>
-              <SlideButton 
+              <SlideButton
                 title="Slide to Approve Doctor"
                 color="#10B981"
                 icon="checkmark-circle"
@@ -398,7 +447,7 @@ export default function AdminHomeScreen({ route }: AdminHomeScreenProps = {}) {
           </View>
         ) : null}
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.statsDashboard}
           onPress={() => handleViewDoctorReviews(item.userId?._id, doctorName)}
         >
@@ -426,7 +475,7 @@ export default function AdminHomeScreen({ route }: AdminHomeScreenProps = {}) {
 
         {!isTerminated && item.userId?._id && (
           <View style={[styles.actionColumn, { marginTop: 14 }]}>
-            <SlideButton 
+            <SlideButton
               title="Slide to Terminate Account"
               color="#EF4444"
               icon="trash-outline"
@@ -444,39 +493,94 @@ export default function AdminHomeScreen({ route }: AdminHomeScreenProps = {}) {
   };
 
   const renderRequestCard = ({ item }: { item: any }) => {
-    const userName = item.userId
-      ? `${item.userId.name?.first || 'User'} ${item.userId.name?.last || ''}`.trim()
+    const isCompleted = item.status === 'COMPLETED';
+    const isCancelled = item.status === 'CANCELLED';
+    const isActive = item.status === 'ASSIGNED' || item.status === 'IN_PROGRESS' || item.status === 'OPEN';
+    
+    const statusColor = isCompleted 
+      ? '#10B981' 
+      : isCancelled 
+      ? '#EF4444' 
+      : '#3B82F6';
+
+    const reporterName = item.userId?.name
+      ? `${item.userId.name.first} ${item.userId.name.last}`.trim()
       : 'Pet Owner';
 
-    const doctorName = item.acceptedBy
-      ? `${item.acceptedBy.name?.first || ''} ${item.acceptedBy.name?.last || ''}`.trim()
+    const doctorName = item.acceptedBy?.name
+      ? `Dr. ${item.acceptedBy.name.first} ${item.acceptedBy.name.last}`.trim()
       : item.mockDoctor?.name || 'Unassigned';
 
+    const animalLabel = item.animalCategory === 'STRAY' 
+      ? 'Stray / Street Animal' 
+      : item.petId?.name 
+      ? `Pet: ${item.petId.name} (${item.petId.species})`
+      : 'Owned Pet';
+
+    const photoUrl = getImageUrl(item.photoUrl);
+
     return (
-      <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+      <TouchableOpacity 
+        style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}
+        onPress={() => setSelectedTranscriptCase(item)}
+        activeOpacity={0.88}
+      >
         <View style={styles.cardHeader}>
-          <Ionicons name="warning-outline" size={22} color="#F59E0B" />
-          <View style={{ flex: 1, marginLeft: 10 }}>
-            <Text style={[styles.cardTitle, { color: theme.text }]}>{userName}</Text>
-            <Text style={[styles.cardSub, { color: theme.textSecondary }]}>
-              Status: {item.status}
-            </Text>
+          <View style={[styles.statusBadge, { backgroundColor: `${statusColor}1A` }]}>
+            <Text style={[styles.statusBadgeText, { color: statusColor }]}>{item.status}</Text>
           </View>
-          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
-            <Text style={styles.statusBadgeText}>{item.status}</Text>
-          </View>
+          <Text style={{ fontSize: 12, color: theme.textSecondary }}>
+            {new Date(item.createdAt).toLocaleDateString(undefined, {
+              month: 'short',
+              day: 'numeric',
+              year: 'numeric'
+            })}
+          </Text>
         </View>
 
-        <Text style={[styles.reqDesc, { color: theme.text }]} numberOfLines={3}>
+        {/* Reporter & Doctor info */}
+        <View style={{ flexDirection: 'row', marginBottom: 4 }}>
+          <Text style={{ fontSize: 13, fontWeight: '600', color: theme.textSecondary }}>Reporter: </Text>
+          <Text style={{ fontSize: 13, fontWeight: '500', color: theme.text }}>{reporterName}</Text>
+        </View>
+
+        <View style={{ flexDirection: 'row', marginBottom: 4 }}>
+          <Text style={{ fontSize: 13, fontWeight: '600', color: theme.textSecondary }}>Doctor: </Text>
+          <Text style={{ fontSize: 13, fontWeight: '500', color: theme.text }}>{doctorName}</Text>
+        </View>
+
+        <View style={{ flexDirection: 'row', marginBottom: 6 }}>
+          <Text style={{ fontSize: 13, fontWeight: '600', color: theme.textSecondary }}>Animal: </Text>
+          <Text style={{ fontSize: 13, fontWeight: 'bold', color: theme.primary }}>{animalLabel}</Text>
+        </View>
+
+        <Text style={[styles.reqDesc, { color: theme.text }]} numberOfLines={2}>
           {item.description}
         </Text>
 
-        <View style={styles.reqFooter}>
-          <Text style={[styles.footerText, { color: theme.textSecondary }]}>
-            Doctor: <Text style={{ color: theme.text, fontWeight: '600' }}>{doctorName}</Text>
+        {/* Photo Thumbnail if available */}
+        {photoUrl && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 6 }}>
+            <Image source={{ uri: photoUrl }} style={{ width: 40, height: 40, borderRadius: 8, marginRight: 8 }} />
+            <Text style={{ fontSize: 12, fontWeight: '600', color: theme.textSecondary }}>📷 Has Injury Photo</Text>
+          </View>
+        )}
+
+        {/* Review & Rating feedback summary if completed */}
+        {item.rating && item.rating.score ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', paddingTop: 6, borderTopWidth: 0.8, borderTopColor: theme.border, marginBottom: 6 }}>
+            <Text style={{ fontSize: 12, fontWeight: '600', color: theme.textSecondary }}>Feedback: </Text>
+            {renderStars(item.rating.score)}
+          </View>
+        ) : null}
+
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: theme.border, paddingTop: 10, marginTop: 4 }}>
+          <Text style={{ fontSize: 12, fontWeight: '700', color: theme.primary, flex: 1 }}>
+            📄 View Full Case Record & Transcript
           </Text>
+          <Ionicons name="chevron-forward" size={18} color={theme.primary} />
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -494,8 +598,8 @@ export default function AdminHomeScreen({ route }: AdminHomeScreenProps = {}) {
     }
   };
 
-  const pendingApps = ratingFilter === 'terminated' 
-    ? [] 
+  const pendingApps = ratingFilter === 'terminated'
+    ? []
     : applications.filter(app => !app.isVerified && !app.userId?.isDeleted);
 
   const verifiedVets = ratingFilter === 'terminated'
@@ -604,6 +708,34 @@ export default function AdminHomeScreen({ route }: AdminHomeScreenProps = {}) {
             </TouchableOpacity>
           </View>
         )}
+
+        {/* View Full Case Record & Transcript Button */}
+        {item.requestId ? (
+          <TouchableOpacity
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              backgroundColor: `${theme.primary}10`,
+              borderColor: theme.primary,
+              borderWidth: 1,
+              paddingVertical: 10,
+              paddingHorizontal: 12,
+              borderRadius: 10,
+              marginTop: 12,
+            }}
+            onPress={() => {
+              const reqObj = typeof item.requestId === 'object' ? item.requestId : { _id: item.requestId };
+              setSelectedTranscriptCase(reqObj);
+            }}
+            activeOpacity={0.8}
+          >
+            <Text style={{ color: theme.primary, fontWeight: '700', fontSize: 13, flex: 1 }}>
+              📄 View Full Case Record & Transcript
+            </Text>
+            <Ionicons name="chevron-forward" size={18} color={theme.primary} />
+          </TouchableOpacity>
+        ) : null}
       </View>
     );
   };
@@ -637,10 +769,10 @@ export default function AdminHomeScreen({ route }: AdminHomeScreenProps = {}) {
           {activeTab === 'applications'
             ? 'Veterinary Control & Verification'
             : activeTab === 'requests'
-            ? 'Emergency Requests Feed'
-            : activeTab === 'reports'
-            ? `Safety Reports ${stats?.pendingReports ? `(${stats.pendingReports} Pending)` : ''}`
-            : 'System Metrics & Analytics'}
+              ? 'Emergency Requests Feed'
+              : activeTab === 'reports'
+                ? `Safety Reports ${stats?.pendingReports ? `(${stats.pendingReports} Pending)` : ''}`
+                : 'System Metrics & Analytics'}
         </Text>
       </View>
 
@@ -656,7 +788,7 @@ export default function AdminHomeScreen({ route }: AdminHomeScreenProps = {}) {
         <View style={{ flex: 1 }}>
           {/* Sub-tabs segment selector */}
           <View style={[styles.subTabsRow, { borderBottomColor: theme.border, backgroundColor: theme.surface }]}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.subTabItem, docSubTab === 'pending' && { borderBottomColor: theme.secondary, borderBottomWidth: 2 }]}
               onPress={() => setDocSubTab('pending')}
             >
@@ -665,7 +797,7 @@ export default function AdminHomeScreen({ route }: AdminHomeScreenProps = {}) {
               </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.subTabItem, docSubTab === 'verified' && { borderBottomColor: theme.secondary, borderBottomWidth: 2 }]}
               onPress={() => setDocSubTab('verified')}
             >
@@ -904,7 +1036,7 @@ export default function AdminHomeScreen({ route }: AdminHomeScreenProps = {}) {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: theme.surface, borderColor: theme.border }]}>
             <Text style={[styles.modalTitle, { color: theme.text }]}>Terminate {selectedDoctorName}</Text>
-            
+
             <Text style={[styles.modalLabel, { color: theme.textSecondary }]}>
               Provide an optional reason for terminating this doctor. The reason will be displayed on their screen on login:
             </Text>
@@ -920,15 +1052,15 @@ export default function AdminHomeScreen({ route }: AdminHomeScreenProps = {}) {
             />
 
             <View style={styles.modalButtons}>
-              <TouchableOpacity 
-                style={[styles.modalBtn, styles.modalBtnCancel, { borderColor: theme.border }]} 
+              <TouchableOpacity
+                style={[styles.modalBtn, styles.modalBtnCancel, { borderColor: theme.border }]}
                 onPress={() => setTerminationModalVisible(false)}
               >
                 <Text style={[styles.modalBtnTextCancel, { color: theme.text }]}>Cancel</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity 
-                style={[styles.modalBtn, styles.modalBtnSubmit, { backgroundColor: '#EF4444' }]} 
+              <TouchableOpacity
+                style={[styles.modalBtn, styles.modalBtnSubmit, { backgroundColor: '#EF4444' }]}
                 onPress={handleTerminateDoctor}
               >
                 <Text style={styles.modalBtnTextSubmit}>Terminate User</Text>
@@ -948,7 +1080,7 @@ export default function AdminHomeScreen({ route }: AdminHomeScreenProps = {}) {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: theme.surface, borderColor: theme.border, maxHeight: '80%' }]}>
             <Text style={[styles.modalTitle, { color: theme.text }]}>Reviews: {selectedDoctorReviewsName}</Text>
-            
+
             {reviewsLoading ? (
               <View style={{ paddingVertical: 40, alignItems: 'center' }}>
                 <ActivityIndicator size="large" color={theme.primary} />
@@ -971,11 +1103,11 @@ export default function AdminHomeScreen({ route }: AdminHomeScreenProps = {}) {
                     <View style={styles.modalReviewHeader}>
                       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                         {[1, 2, 3, 4, 5].map((star) => (
-                          <Ionicons 
-                            key={star} 
-                            name={star <= item.score ? 'star' : 'star-outline'} 
-                            size={14} 
-                            color="#F59E0B" 
+                          <Ionicons
+                            key={star}
+                            name={star <= item.score ? 'star' : 'star-outline'}
+                            size={14}
+                            color="#F59E0B"
                             style={{ marginRight: 2 }}
                           />
                         ))}
@@ -997,13 +1129,241 @@ export default function AdminHomeScreen({ route }: AdminHomeScreenProps = {}) {
               />
             )}
 
-            <TouchableOpacity 
-              style={[styles.modalBtnClose, { backgroundColor: theme.primary }]} 
+            <TouchableOpacity
+              style={[styles.modalBtnClose, { backgroundColor: theme.primary }]}
               onPress={() => setReviewsModalVisible(false)}
             >
               <Text style={styles.modalBtnTextSubmit}>Close</Text>
             </TouchableOpacity>
           </View>
+        </View>
+      </Modal>
+
+      {/* Case Record Transcript Modal */}
+      <Modal
+        visible={!!selectedTranscriptCase}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setSelectedTranscriptCase(null)}
+      >
+        {selectedTranscriptCase && (
+          <View style={styles.tsBackdrop}>
+            <View style={[styles.tsContent, { backgroundColor: theme.surface }]}>
+              {/* Modal Header */}
+              <View style={[styles.tsHeader, { borderBottomColor: theme.border }]}>
+                <View>
+                  <Text style={[styles.tsTitle, { color: theme.text }]}>Case Record Transcript</Text>
+                  <Text style={{ fontSize: 12, color: theme.textSecondary }}>
+                    ID: {selectedTranscriptCase._id}
+                  </Text>
+                </View>
+                <TouchableOpacity onPress={() => setSelectedTranscriptCase(null)} style={styles.tsCloseIcon}>
+                  <Ionicons name="close" size={24} color={theme.text} />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.tsScroll}>
+                {/* Status & Date */}
+                <View style={styles.tsStatusRow}>
+                  <View style={[
+                    styles.tsStatusBadge, 
+                    { backgroundColor: selectedTranscriptCase.status === 'COMPLETED' ? '#10B9811A' : '#EF44441A' }
+                  ]}>
+                    <Text style={[
+                      styles.tsStatusText, 
+                      { color: selectedTranscriptCase.status === 'COMPLETED' ? '#10B981' : '#EF4444' }
+                    ]}>
+                      {selectedTranscriptCase.status}
+                    </Text>
+                  </View>
+                  <Text style={{ color: theme.textSecondary, fontSize: 13 }}>
+                    Logged on {new Date(selectedTranscriptCase.createdAt || Date.now()).toLocaleString()}
+                  </Text>
+                </View>
+
+                {/* Patient / Pet Owner Info Card */}
+                <View style={[styles.tsSectionCard, { backgroundColor: theme.background, borderColor: theme.border }]}>
+                  <Text style={[styles.tsSectionHeading, { color: theme.textSecondary }]}>PET OWNER / REPORTER INFORMATION</Text>
+                  <View style={styles.tsReporterRow}>
+                    <Ionicons name="person-circle-outline" size={32} color={theme.primary} />
+                    <View style={{ flex: 1, marginLeft: 10 }}>
+                      <Text style={[styles.tsReporterName, { color: theme.text }]}>
+                        {selectedTranscriptCase.userId?.name
+                          ? `${selectedTranscriptCase.userId.name.first} ${selectedTranscriptCase.userId.name.last}`.trim()
+                          : selectedTranscriptCase.userName || 'Pet Owner'}
+                      </Text>
+                      {selectedTranscriptCase.userId?.email && (
+                        <Text style={{ fontSize: 12, color: theme.textSecondary, marginTop: 2 }}>
+                          ✉️ {selectedTranscriptCase.userId.email}
+                        </Text>
+                      )}
+                      {(selectedTranscriptCase.userId?.phone || selectedTranscriptCase.userPhone) && (
+                        <Text style={{ fontSize: 12, color: theme.textSecondary, marginTop: 2 }}>
+                          📞 {selectedTranscriptCase.userId?.phone || selectedTranscriptCase.userPhone}
+                        </Text>
+                      )}
+                    </View>
+                    {(selectedTranscriptCase.userId?.phone || selectedTranscriptCase.userPhone) && (
+                      <TouchableOpacity 
+                        style={[styles.tsCallBtn, { backgroundColor: theme.primary }]}
+                        onPress={() => handleCallUser(selectedTranscriptCase.userId?.phone || selectedTranscriptCase.userPhone)}
+                      >
+                        <Ionicons name="call" size={14} color="#FFF" />
+                        <Text style={styles.tsCallBtnText}>Call</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
+
+                {/* Assigned Doctor Info Card */}
+                <View style={[styles.tsSectionCard, { backgroundColor: theme.background, borderColor: theme.border }]}>
+                  <Text style={[styles.tsSectionHeading, { color: theme.textSecondary }]}>ASSIGNED VETERINARIAN</Text>
+                  <View style={styles.tsReporterRow}>
+                    <Ionicons name="medical-outline" size={32} color="#10B981" />
+                    <View style={{ flex: 1, marginLeft: 10 }}>
+                      <Text style={[styles.tsReporterName, { color: theme.text }]}>
+                        {selectedTranscriptCase.acceptedBy?.name
+                          ? `Dr. ${selectedTranscriptCase.acceptedBy.name.first} ${selectedTranscriptCase.acceptedBy.name.last}`.trim()
+                          : selectedTranscriptCase.mockDoctor?.name || 'Unassigned / Open'}
+                      </Text>
+                      {selectedTranscriptCase.acceptedBy?.email && (
+                        <Text style={{ fontSize: 12, color: theme.textSecondary, marginTop: 2 }}>
+                          ✉️ {selectedTranscriptCase.acceptedBy.email}
+                        </Text>
+                      )}
+                      {selectedTranscriptCase.acceptedBy?.phone && (
+                        <Text style={{ fontSize: 12, color: theme.textSecondary, marginTop: 2 }}>
+                          📞 {selectedTranscriptCase.acceptedBy.phone}
+                        </Text>
+                      )}
+                    </View>
+                    {selectedTranscriptCase.acceptedBy?.phone && (
+                      <TouchableOpacity 
+                        style={[styles.tsCallBtn, { backgroundColor: '#10B981' }]}
+                        onPress={() => handleCallUser(selectedTranscriptCase.acceptedBy.phone)}
+                      >
+                        <Ionicons name="call" size={14} color="#FFF" />
+                        <Text style={styles.tsCallBtnText}>Call Doctor</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
+
+                {/* Emergency Description */}
+                <View style={[styles.tsSectionCard, { backgroundColor: theme.background, borderColor: theme.border }]}>
+                  <Text style={[styles.tsSectionHeading, { color: theme.textSecondary }]}>EMERGENCY DESCRIPTION</Text>
+                  <Text style={[styles.tsDescText, { color: theme.text }]}>
+                    {selectedTranscriptCase.description || 'No description provided.'}
+                  </Text>
+
+                  {/* Animal Info */}
+                  <View style={styles.tsAnimalBox}>
+                    <Ionicons name="paw" size={18} color={theme.primary} style={{ marginRight: 8 }} />
+                    <Text style={{ color: theme.text, fontWeight: '600', fontSize: 13 }}>
+                      {selectedTranscriptCase.animalCategory === 'STRAY'
+                        ? 'Stray / Street Animal'
+                        : selectedTranscriptCase.petId?.name
+                        ? `Owned Pet: ${selectedTranscriptCase.petId.name} (${selectedTranscriptCase.petId.species})`
+                        : 'Owned Pet'}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* GPS Location & Map Button */}
+                {selectedTranscriptCase.location?.coordinates && (
+                  <View style={[styles.tsSectionCard, { backgroundColor: theme.background, borderColor: theme.border }]}>
+                    <Text style={[styles.tsSectionHeading, { color: theme.textSecondary }]}>BROADCAST GPS LOCATION</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                        <Ionicons name="location-sharp" size={22} color="#EF4444" style={{ marginRight: 6 }} />
+                        <Text style={{ color: theme.text, fontSize: 13 }}>
+                          Lat: {selectedTranscriptCase.location.coordinates[1]?.toFixed(4)}, Lng: {selectedTranscriptCase.location.coordinates[0]?.toFixed(4)}
+                        </Text>
+                      </View>
+                      <TouchableOpacity 
+                        style={styles.tsMapBtn}
+                        onPress={() => handleOpenMap(selectedTranscriptCase.location.coordinates)}
+                      >
+                        <Ionicons name="map" size={14} color="#FFF" style={{ marginRight: 4 }} />
+                        <Text style={{ color: '#FFF', fontSize: 12, fontWeight: 'bold' }}>Map</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
+
+                {/* Injury Photo */}
+                {getImageUrl(selectedTranscriptCase.photoUrl) && (
+                  <View style={[styles.tsSectionCard, { backgroundColor: theme.background, borderColor: theme.border }]}>
+                    <Text style={[styles.tsSectionHeading, { color: theme.textSecondary }]}>INJURY PHOTO</Text>
+                    <TouchableOpacity 
+                      style={styles.tsPhotoContainer}
+                      onPress={() => setZoomImage(getImageUrl(selectedTranscriptCase.photoUrl))}
+                      activeOpacity={0.9}
+                    >
+                      <Image source={{ uri: getImageUrl(selectedTranscriptCase.photoUrl)! }} style={styles.tsPhoto} />
+                      <View style={styles.tsPhotoOverlay}>
+                        <Ionicons name="expand-outline" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+                        <Text style={styles.tsPhotoOverlayText}>Injury Photo (Tap to inspect)</Text>
+                      </View>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                {/* Doctor Resolution / Treatment Notes */}
+                {selectedTranscriptCase.resolutionNotes ? (
+                  <View style={[styles.tsSectionCard, { backgroundColor: `${theme.primary}0F`, borderColor: theme.primary }]}>
+                    <Text style={[styles.tsSectionHeading, { color: theme.primary }]}>TREATMENT & RESOLUTION NOTES</Text>
+                    <Text style={[styles.tsDescText, { color: theme.text }]}>
+                      {selectedTranscriptCase.resolutionNotes}
+                    </Text>
+                  </View>
+                ) : null}
+
+                {/* User Rating & Feedback */}
+                {selectedTranscriptCase.rating && selectedTranscriptCase.rating.score ? (
+                  <View style={[styles.tsSectionCard, { backgroundColor: '#FEF3C72A', borderColor: '#F59E0B' }]}>
+                    <Text style={[styles.tsSectionHeading, { color: '#B45309' }]}>USER FEEDBACK & RATING</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 6 }}>
+                      {renderStars(selectedTranscriptCase.rating.score)}
+                      <Text style={{ marginLeft: 8, fontWeight: 'bold', color: '#B45309', fontSize: 15 }}>
+                        {selectedTranscriptCase.rating.score} / 5
+                      </Text>
+                    </View>
+                    {selectedTranscriptCase.rating.review ? (
+                      <Text style={{ color: theme.text, fontStyle: 'italic', fontSize: 14, lineHeight: 20 }}>
+                        "{selectedTranscriptCase.rating.review}"
+                      </Text>
+                    ) : null}
+                  </View>
+                ) : null}
+              </ScrollView>
+            </View>
+          </View>
+        )}
+      </Modal>
+
+      {/* Full-Screen Zoom Modal */}
+      <Modal
+        visible={!!zoomImage}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setZoomImage(null)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.95)', justifyContent: 'center', alignItems: 'center' }}>
+          <TouchableOpacity 
+            style={{ position: 'absolute', top: 50, right: 20, zIndex: 10 }}
+            onPress={() => setZoomImage(null)}
+          >
+            <Ionicons name="close-circle" size={36} color="#FFFFFF" />
+          </TouchableOpacity>
+          {zoomImage && (
+            <Image 
+              source={{ uri: zoomImage }} 
+              style={{ width: '92%', height: '75%' }} 
+              resizeMode="contain"
+            />
+          )}
+          <Text style={{ color: '#FFF', fontSize: 14, marginTop: 14, fontWeight: '600' }}>Injury Photo</Text>
         </View>
       </Modal>
     </View>
@@ -1492,5 +1852,131 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  tsBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    justifyContent: 'flex-end',
+  },
+  tsContent: {
+    height: '85%',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+  },
+  tsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+  },
+  tsTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  tsCloseIcon: {
+    padding: 6,
+  },
+  tsScroll: {
+    paddingVertical: 16,
+    paddingBottom: 40,
+  },
+  tsStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  tsStatusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  tsStatusText: {
+    fontWeight: 'bold',
+    fontSize: 12,
+  },
+  tsSectionCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 14,
+    marginBottom: 14,
+  },
+  tsSectionHeading: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+    marginBottom: 8,
+  },
+  tsReporterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  tsReporterName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  tsCallBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+  },
+  tsCallBtnText: {
+    color: '#FFF',
+    fontWeight: 'bold',
+    fontSize: 12,
+    marginLeft: 4,
+  },
+  tsDescText: {
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  tsAnimalBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.05)',
+  },
+  tsMapBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#3B82F6',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  tsPhotoContainer: {
+    position: 'relative',
+    height: 180,
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginTop: 4,
+  },
+  tsPhoto: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  tsPhotoOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 6,
+  },
+  tsPhotoOverlayText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
   },
 });
