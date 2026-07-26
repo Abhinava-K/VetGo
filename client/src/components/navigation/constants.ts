@@ -20,6 +20,10 @@ export const DEFAULT_TABS: TabConfig[] = [
   { name: 'Profile', label: 'Profile', icon: 'person-outline', activeIcon: 'person' },
   { name: 'DoctorHome', label: 'Alerts', icon: 'alert-circle-outline', activeIcon: 'alert-circle' },
   { name: 'DoctorHistory', label: 'History', icon: 'time-outline', activeIcon: 'time' },
+  { name: 'AdminVets', label: 'Vets', icon: 'shield-checkmark-outline', activeIcon: 'shield-checkmark' },
+  { name: 'AdminRequests', label: 'Feed', icon: 'pulse-outline', activeIcon: 'pulse' },
+  { name: 'AdminReports', label: 'Reports', icon: 'flag-outline', activeIcon: 'flag' },
+  { name: 'AdminMetrics', label: 'Metrics', icon: 'bar-chart-outline', activeIcon: 'bar-chart' },
 ];
 
 export const SPRING_CONFIG = {

@@ -22,8 +22,35 @@ import SlideButton from '../../components/common/SlideButton';
 
 type TabType = 'applications' | 'requests' | 'reports' | 'stats';
 
-export default function AdminHomeScreen() {
-  const [activeTab, setActiveTab] = useState<TabType>('applications');
+interface AdminHomeScreenProps {
+  route?: any;
+}
+
+export default function AdminHomeScreen({ route }: AdminHomeScreenProps = {}) {
+  const getTabFromRouteName = (routeName?: string, initialParamTab?: TabType): TabType => {
+    if (initialParamTab) return initialParamTab;
+    switch (routeName) {
+      case 'AdminRequests':
+        return 'requests';
+      case 'AdminReports':
+        return 'reports';
+      case 'AdminMetrics':
+        return 'stats';
+      case 'AdminVets':
+      default:
+        return 'applications';
+    }
+  };
+
+  const [activeTab, setActiveTab] = useState<TabType>(() => getTabFromRouteName(route?.name, route?.params?.initialTab));
+
+  useEffect(() => {
+    const currentTab = getTabFromRouteName(route?.name, route?.params?.initialTab);
+    if (currentTab !== activeTab) {
+      setActiveTab(currentTab);
+    }
+  }, [route?.name, route?.params?.initialTab]);
+
   const [docSubTab, setDocSubTab] = useState<'pending' | 'verified'>('pending');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -605,64 +632,16 @@ export default function AdminHomeScreen() {
         </View>
         <Text style={[styles.title, { color: theme.text }]}>System Dashboard</Text>
 
-        {/* Tab Navigation */}
-        <View style={styles.tabsRow}>
-          <TouchableOpacity
-            style={[styles.tabItem, activeTab === 'applications' && styles.tabActive]}
-            onPress={() => setActiveTab('applications')}
-          >
-            <Text
-              style={[
-                styles.tabText,
-                { color: activeTab === 'applications' ? '#6366F1' : theme.textSecondary },
-              ]}
-            >
-              Vets Control
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.tabItem, activeTab === 'requests' && styles.tabActive]}
-            onPress={() => setActiveTab('requests')}
-          >
-            <Text
-              style={[
-                styles.tabText,
-                { color: activeTab === 'requests' ? '#6366F1' : theme.textSecondary },
-              ]}
-            >
-              Emergency Feed
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.tabItem, activeTab === 'reports' && styles.tabActive]}
-            onPress={() => setActiveTab('reports')}
-          >
-            <Text
-              style={[
-                styles.tabText,
-                { color: activeTab === 'reports' ? '#EF4444' : theme.textSecondary, fontWeight: activeTab === 'reports' ? 'bold' : 'normal' },
-              ]}
-            >
-              Reports 🚩 {stats?.pendingReports ? `(${stats.pendingReports})` : ''}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.tabItem, activeTab === 'stats' && styles.tabActive]}
-            onPress={() => setActiveTab('stats')}
-          >
-            <Text
-              style={[
-                styles.tabText,
-                { color: activeTab === 'stats' ? '#6366F1' : theme.textSecondary },
-              ]}
-            >
-              Metrics
-            </Text>
-          </TouchableOpacity>
-        </View>
+        {/* Subtitle describing current view */}
+        <Text style={{ fontSize: 13, color: theme.textSecondary, marginTop: 4, fontWeight: '600' }}>
+          {activeTab === 'applications'
+            ? 'Veterinary Control & Verification'
+            : activeTab === 'requests'
+            ? 'Emergency Requests Feed'
+            : activeTab === 'reports'
+            ? `Safety Reports ${stats?.pendingReports ? `(${stats.pendingReports} Pending)` : ''}`
+            : 'System Metrics & Analytics'}
+        </Text>
       </View>
 
       {/* Main Content */}
@@ -1091,7 +1070,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: 16,
-    paddingBottom: 40,
+    paddingBottom: 90,
   },
   card: {
     borderRadius: 16,

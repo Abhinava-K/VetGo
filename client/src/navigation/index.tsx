@@ -8,7 +8,7 @@ import AssignedRequestScreen from '../screens/doctor/AssignedRequestScreen';
 import CreateRequestScreen from '../screens/user/CreateRequestScreen';
 import RequestStatusScreen from '../screens/user/RequestStatusScreen';
 import AddPetScreen from '../screens/user/AddPetScreen';
-import AdminHomeScreen from '../screens/admin/AdminHomeScreen';
+import AdminTab from './AdminTab';
 import { AuthContext } from '../context/AuthContext';
 
 const Stack = createStackNavigator();
@@ -30,7 +30,7 @@ export default function RootNavigator() {
         <Stack.Screen name="Auth" component={AuthStack} />
       ) : user.role === 'ADMIN' ? (
         <>
-          <Stack.Screen name="AdminHome" component={AdminHomeScreen} />
+          <Stack.Screen name="AdminMain" component={AdminTab} />
         </>
       ) : user.role === 'DOCTOR' ? (
         <>
