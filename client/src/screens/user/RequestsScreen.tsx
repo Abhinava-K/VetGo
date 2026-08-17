@@ -19,8 +19,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { ThemeContext } from '../../context/ThemeContext';
 import api from '../../services/api';
 import ReportModal from '../../components/common/ReportModal';
+import { useTranslation } from '../../i18n';
 
 export default function RequestsScreen() {
+  const { t } = useTranslation();
   const { theme } = useContext(ThemeContext);
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
@@ -152,12 +154,12 @@ export default function RequestsScreen() {
 
         {/* Doctor & Animal Category info */}
         <View style={styles.metaRow}>
-          <Text style={[styles.metaLabel, { color: theme.textSecondary }]}>Doctor: </Text>
+          <Text style={[styles.metaLabel, { color: theme.textSecondary }]}>{t('doctor')}: </Text>
           <Text style={[styles.metaValue, { color: theme.text }]}>{doctorName}</Text>
         </View>
 
         <View style={styles.metaRow}>
-          <Text style={[styles.metaLabel, { color: theme.textSecondary }]}>Animal: </Text>
+          <Text style={[styles.metaLabel, { color: theme.textSecondary }]}>{t('animal')}: </Text>
           <Text style={[styles.metaValue, { color: theme.primary, fontWeight: 'bold' }]}>{animalLabel}</Text>
         </View>
 
@@ -169,7 +171,7 @@ export default function RequestsScreen() {
         {photoUrl && (
           <View style={styles.thumbnailBox}>
             <Image source={{ uri: photoUrl }} style={styles.thumbnailImage} />
-            <Text style={[styles.thumbnailLabel, { color: theme.textSecondary }]}>📷 Has Injury Photo</Text>
+            <Text style={[styles.thumbnailLabel, { color: theme.textSecondary }]}>{t('has_injury_photo')}</Text>
           </View>
         )}
 
@@ -183,7 +185,7 @@ export default function RequestsScreen() {
 
         <View style={[styles.actionRow, { borderTopColor: theme.border }]}>
           <Text style={[styles.actionText, { color: isActive ? theme.primary : theme.textSecondary, flex: 1 }]}>
-            {isActive ? '⚡ Active Case (Go to Live View)' : '📄 View Full Case Record & Transcript'}
+            {isActive ? t('active_case_go_live') : t('view_full_case_record')}
           </Text>
           <TouchableOpacity
             style={[styles.cardFlagBtn, item.hasReported && { opacity: 0.5 }]}
@@ -224,19 +226,19 @@ export default function RequestsScreen() {
         paddingTop: Math.max(insets.top + 10, 25)
       }
     ]}>
-      <Text style={[styles.title, { color: theme.text }]}>Case History Logs</Text>
+      <Text style={[styles.title, { color: theme.text }]}>{t('case_history_logs')}</Text>
 
       {loading ? (
         <View style={styles.centerBox}>
           <ActivityIndicator size="large" color={theme.primary} />
-          <Text style={{ marginTop: 12, color: theme.textSecondary }}>Loading history...</Text>
+          <Text style={{ marginTop: 12, color: theme.textSecondary }}>{t('loading_history')}</Text>
         </View>
       ) : requests.length === 0 ? (
         <View style={styles.emptyState}>
           <Ionicons name="folder-open-outline" size={54} color={theme.textSecondary} />
-          <Text style={[styles.emptyTitle, { color: theme.text }]}>No Past Rescues</Text>
+          <Text style={[styles.emptyTitle, { color: theme.text }]}>{t('no_past_rescues')}</Text>
           <Text style={[styles.emptySub, { color: theme.textSecondary }]}>
-            Your emergency request history will be archived here.
+            {t('history_archive_sub')}
           </Text>
         </View>
       ) : (

@@ -111,11 +111,11 @@ export default function ProfileScreen() {
   const getRoleLabel = (role: string) => {
     switch (role) {
       case 'DOCTOR':
-        return { label: 'VET DOCTOR', color: theme.secondary, bg: 'rgba(21, 101, 192, 0.15)' };
+        return { label: t('vet_doctor'), color: theme.secondary, bg: 'rgba(21, 101, 192, 0.15)' };
       case 'ADMIN':
-        return { label: 'ADMINISTRATOR', color: theme.warning, bg: 'rgba(251, 140, 0, 0.15)' };
+        return { label: t('administrator'), color: theme.warning, bg: 'rgba(251, 140, 0, 0.15)' };
       default:
-        return { label: 'PET OWNER', color: theme.success, bg: 'rgba(67, 160, 71, 0.15)' };
+        return { label: t('pet_owner'), color: theme.success, bg: 'rgba(67, 160, 71, 0.15)' };
     }
   };
 
@@ -165,7 +165,7 @@ export default function ProfileScreen() {
           <View style={[styles.statCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
             <Ionicons name="paw-outline" size={24} color={theme.primary} />
             <Text style={[styles.statValue, { color: theme.text }]}>{petCount}</Text>
-            <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Pets</Text>
+            <Text style={[styles.statLabel, { color: theme.textSecondary }]}>{t('pets')}</Text>
           </View>
         )}
 
@@ -173,7 +173,7 @@ export default function ProfileScreen() {
           <Ionicons name="shield-checkmark-outline" size={24} color={theme.secondary} />
           <Text style={[styles.statValue, { color: theme.text }]}>{requestCount}</Text>
           <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
-            {profile?.role === 'DOCTOR' ? 'Rescues' : 'Requests'}
+            {profile?.role === 'DOCTOR' ? t('rescues') : t('requests')}
           </Text>
         </View>
 
@@ -182,7 +182,7 @@ export default function ProfileScreen() {
           <Text style={[styles.statValue, { color: (profile?.warningCount || 0) > 0 ? '#EF4444' : theme.text }]}>
             {profile?.warningCount || 0}
           </Text>
-          <Text style={[styles.statLabel, { color: (profile?.warningCount || 0) > 0 ? '#EF4444' : theme.textSecondary }]}>Strikes</Text>
+          <Text style={[styles.statLabel, { color: (profile?.warningCount || 0) > 0 ? '#EF4444' : theme.textSecondary }]}>{t('strikes')}</Text>
         </View>
 
         {profile?.role === 'DOCTOR' && (
@@ -191,19 +191,19 @@ export default function ProfileScreen() {
             <Text style={[styles.statValue, { color: theme.text }]}>
               {docProfile?.ratingAvg ? docProfile.ratingAvg.toFixed(1) : '5.0'}
             </Text>
-            <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Rating</Text>
+            <Text style={[styles.statLabel, { color: theme.textSecondary }]}>{t('rating')}</Text>
           </View>
         )}
       </View>
 
       {/* Account Info Section */}
-      <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>ACCOUNT DETAIL</Text>
+      <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>{t('account_detail')}</Text>
       
       <View style={[styles.infoList, { backgroundColor: theme.surface, borderColor: theme.border }]}>
         <View style={[styles.infoItem, { borderBottomColor: theme.border }]}>
           <Feather name="phone" size={18} color={theme.textSecondary} style={styles.infoIcon} />
           <View>
-            <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>Phone Number</Text>
+            <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>{t('phone_number')}</Text>
             <Text style={[styles.infoValue, { color: theme.text }]}>{formatPhone(profile?.phone)}</Text>
           </View>
         </View>
@@ -212,7 +212,7 @@ export default function ProfileScreen() {
           <View style={[styles.infoItem, { borderBottomColor: theme.border }]}>
             <Feather name="award" size={18} color={theme.textSecondary} style={styles.infoIcon} />
             <View>
-              <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>Qualifications</Text>
+              <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>{t('qualifications')}</Text>
               <Text style={[styles.infoValue, { color: theme.text }]}>{docProfile.qualifications}</Text>
             </View>
           </View>
@@ -221,7 +221,7 @@ export default function ProfileScreen() {
         <View style={styles.infoItem}>
           <Feather name="calendar" size={18} color={theme.textSecondary} style={styles.infoIcon} />
           <View>
-            <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>Member Since</Text>
+            <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>{t('member_since')}</Text>
             <Text style={[styles.infoValue, { color: theme.text }]}>
               {profile?.createdAt ? new Date(profile.createdAt).toLocaleDateString(undefined, {
                 year: 'numeric',

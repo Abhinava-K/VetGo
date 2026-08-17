@@ -8,10 +8,12 @@ import { AnimatedTabBar } from '../components/navigation/AnimatedTabBar';
 import WarningStrikeModal from '../components/common/WarningStrikeModal';
 import { AuthContext } from '../context/AuthContext';
 import api from '../services/api';
+import { useTranslation } from '../i18n';
 
 const Tab = createBottomTabNavigator();
 
 export default function MainTab() {
+  const { t } = useTranslation();
   const { user, updateUser } = useContext(AuthContext);
 
   useEffect(() => {
@@ -52,10 +54,10 @@ export default function MainTab() {
           sceneStyle: { paddingBottom: 70 },
         }}
       >
-        <Tab.Screen name="Map" component={MapScreen} options={{ title: 'Map' }} />
-        <Tab.Screen name="Requests" component={RequestsScreen} options={{ title: 'Requests' }} />
-        <Tab.Screen name="Pets" component={PetsScreen} options={{ title: 'Pets' }} />
-        <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: 'Profile' }} />
+        <Tab.Screen name="Map" component={MapScreen} options={{ title: t('map') }} />
+        <Tab.Screen name="Requests" component={RequestsScreen} options={{ title: t('requests') }} />
+        <Tab.Screen name="Pets" component={PetsScreen} options={{ title: t('pets') }} />
+        <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: t('profile') }} />
       </Tab.Navigator>
 
       {unackWarning && (

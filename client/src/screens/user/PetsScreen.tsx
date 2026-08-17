@@ -5,8 +5,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemeContext } from '../../context/ThemeContext';
 import api from '../../services/api';
+import { useTranslation } from '../../i18n';
 
 export default function PetsScreen() {
+  const { t } = useTranslation();
   const { theme } = useContext(ThemeContext);
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
@@ -88,7 +90,7 @@ export default function PetsScreen() {
       }
     ]}>
       <View style={styles.header}>
-        <Text style={[styles.title, { color: theme.text }]}>My Pets</Text>
+        <Text style={[styles.title, { color: theme.text }]}>{t('my_pets')}</Text>
         <TouchableOpacity onPress={() => navigation.navigate('AddPet')}>
           <Ionicons name="add-circle" size={32} color={theme.primary} />
         </TouchableOpacity>
@@ -98,12 +100,12 @@ export default function PetsScreen() {
         <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 50 }} />
       ) : pets.length === 0 ? (
         <View style={styles.empty}>
-          <Text style={{ color: theme.textSecondary }}>You haven't added any pets yet.</Text>
+          <Text style={{ color: theme.textSecondary }}>{t('no_pets_yet')}</Text>
           <TouchableOpacity 
             style={[styles.btn, { backgroundColor: theme.secondary }]}
             onPress={() => navigation.navigate('AddPet')}
           >
-            <Text style={styles.btnText}>Add Your First Pet</Text>
+            <Text style={styles.btnText}>{t('add_your_first_pet')}</Text>
           </TouchableOpacity>
         </View>
       ) : (

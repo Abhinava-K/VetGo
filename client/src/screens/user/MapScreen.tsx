@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { ThemeContext } from '../../context/ThemeContext';
 import api from '../../services/api';
+import { useTranslation } from '../../i18n';
 
 let WebView: any = null;
 try {
@@ -38,6 +39,7 @@ interface Doctor {
 }
 
 export default function MapScreen() {
+  const { t } = useTranslation();
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -403,7 +405,7 @@ export default function MapScreen() {
           <Ionicons name="search" size={20} color={theme.textSecondary} style={{ marginRight: 8 }} />
           <TextInput
             style={[styles.searchInput, { color: theme.text }]}
-            placeholder="Search vets, clinics, specialties..."
+            placeholder={t('search_placeholder')}
             placeholderTextColor={theme.textSecondary}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -434,7 +436,7 @@ export default function MapScreen() {
               style={{ marginRight: 4 }}
             />
             <Text style={[styles.filterChipText, { color: activeFilter === 'all' ? '#FFF' : theme.text }]}>
-              All Vets ({doctors.length})
+              {t('all_vets')} ({doctors.length})
             </Text>
           </TouchableOpacity>
 
@@ -455,7 +457,7 @@ export default function MapScreen() {
               style={{ marginRight: 4 }}
             />
             <Text style={[styles.filterChipText, { color: activeFilter === 'emergency' ? '#FFF' : theme.text }]}>
-              24/7 Emergency
+              {t('emergency_247')}
             </Text>
           </TouchableOpacity>
 
@@ -476,7 +478,7 @@ export default function MapScreen() {
               style={{ marginRight: 4 }}
             />
             <Text style={[styles.filterChipText, { color: activeFilter === 'home' ? '#FFF' : theme.text }]}>
-              Home Visit
+              {t('home_visit')}
             </Text>
           </TouchableOpacity>
 
@@ -497,7 +499,7 @@ export default function MapScreen() {
               style={{ marginRight: 4 }}
             />
             <Text style={[styles.filterChipText, { color: activeFilter === 'top' ? '#FFF' : theme.text }]}>
-              Top Rated (4.5+)
+              {t('top_rated')}
             </Text>
           </TouchableOpacity>
         </ScrollView>
@@ -583,7 +585,7 @@ export default function MapScreen() {
               style={[styles.requestDocBtn, { backgroundColor: theme.primary }]}
               onPress={() => handleRequestHelp(selectedDoctor)}
             >
-              <Text style={styles.requestDocBtnText}>Dispatch Emergency Vet</Text>
+              <Text style={styles.requestDocBtnText}>{t('dispatch_emergency_vet')}</Text>
               <Ionicons name="arrow-forward" size={18} color="#FFF" style={{ marginLeft: 6 }} />
             </TouchableOpacity>
           </View>
@@ -596,7 +598,7 @@ export default function MapScreen() {
           activeOpacity={0.9}
         >
           <Ionicons name="alert-circle" size={22} color="#FFF" style={{ marginRight: 8 }} />
-          <Text style={styles.globalRequestBtnText}>Request Emergency Vet Now</Text>
+          <Text style={styles.globalRequestBtnText}>{t('request_emergency_vet_now')}</Text>
         </TouchableOpacity>
       )}
     </View>
