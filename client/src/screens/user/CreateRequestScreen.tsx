@@ -16,9 +16,30 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { ThemeContext } from '../../context/ThemeContext';
 import api from '../../services/api';
+import { useTranslation } from '../../i18n';
+
+const ANIMAL_TYPES = [
+  { id: 'cow', icon: '🐮', labelKey: 'cow' },
+  { id: 'buffalo', icon: '🐃', labelKey: 'buffalo' },
+  { id: 'goat', icon: '🐐', labelKey: 'goat' },
+  { id: 'sheep', icon: '🐑', labelKey: 'sheep' },
+  { id: 'poultry', icon: '🐔', labelKey: 'poultry' },
+  { id: 'dog', icon: '🐶', labelKey: 'dog' },
+  { id: 'cat', icon: '🐱', labelKey: 'cat' },
+  { id: 'other', icon: '🐾', labelKey: 'other' },
+];
+
+const URGENCY_LEVELS = [
+  { id: 'CRITICAL', labelKey: 'critical', color: '#EF4444', badge: '🔴' },
+  { id: 'URGENT', labelKey: 'urgent', color: '#F59E0B', badge: '🟡' },
+  { id: 'ROUTINE', labelKey: 'routine', color: '#10B981', badge: '🟢' },
+];
 
 export default function CreateRequestScreen() {
+  const { t } = useTranslation();
   const [description, setDescription] = useState('');
+  const [animalType, setAnimalType] = useState('cow');
+  const [urgency, setUrgency] = useState<'CRITICAL' | 'URGENT' | 'ROUTINE'>('CRITICAL');
   const [animalCategory, setAnimalCategory] = useState<'PET' | 'STRAY'>('STRAY');
   const [petId, setPetId] = useState<string | undefined>(undefined);
   const [pets, setPets] = useState<any[]>([]);
@@ -139,14 +160,78 @@ export default function CreateRequestScreen() {
       ]}
       showsVerticalScrollIndicator={false}
     >
-      <Text style={[styles.label, { color: theme.text }]}>What is the emergency?</Text>
+      {/* Visual Animal Selector Grid (Pictograms) */}
+      <Text style={[styles.label, { color: theme.text }]}>{t('select_animal')}</Text>
+      <View style={styles.animalGrid}>
+        {ANIMAL_TYPES.map((animal) => {
+          const isSelected = animalType === animal.id;
+          return (
+            <TouchableOpacity
+              key={animal.id}
+              style={[
+                styles.animalTile,
+                { 
+                  backgroundColor: isSelected ? `${theme.primary}20` : theme.surface, 
+                  borderColor: isSelected ? theme.primary : theme.border 
+                }
+              ]}
+              onPress={() => setAnimalType(animal.id)}
+            >
+              <Text style={{ fontSize: 32 }}>{animal.icon}</Text>
+              <Text 
+                style={[
+                  styles.animalTileText, 
+                  { color: isSelected ? theme.primary : theme.text, fontWeight: isSelected ? 'bold' : '600' }
+                ]}
+                numberOfLines={1}
+              >
+                {t(animal.labelKey)}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      {/* Urgency Level Selector */}
+      <Text style={[styles.label, { color: theme.text, marginTop: 16 }]}>{t('urgency_level')}</Text>
+      <View style={styles.urgencyRow}>
+        {URGENCY_LEVELS.map((u) => {
+          const isSelected = urgency === u.id;
+          return (
+            <TouchableOpacity
+              key={u.id}
+              style={[
+                styles.urgencyBtn,
+                {
+                  backgroundColor: isSelected ? `${u.color}20` : theme.surface,
+                  borderColor: isSelected ? u.color : theme.border,
+                }
+              ]}
+              onPress={() => setUrgency(u.id as any)}
+            >
+              <Text style={{ fontSize: 16, marginRight: 6 }}>{u.badge}</Text>
+              <Text 
+                style={{ 
+                  color: isSelected ? u.color : theme.text, 
+                  fontWeight: 'bold', 
+                  fontSize: 13 
+                }}
+              >
+                {t(u.labelKey)}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      <Text style={[styles.label, { color: theme.text, marginTop: 16 }]}>{t('emergency_title')}</Text>
       <TextInput
         style={[styles.textArea, { 
           backgroundColor: theme.surface, 
           color: theme.text,
           borderColor: theme.border 
         }]}
-        placeholder="Describe the animal and condition (e.g., Dog injured in leg, bleeding...)"
+        placeholder={t('describe_condition')}
         placeholderTextColor={theme.textSecondary}
         multiline
         numberOfLines={4}
@@ -160,10 +245,10 @@ export default function CreateRequestScreen() {
 
       {/* Injury Photo Section */}
       <Text style={[styles.label, { color: theme.text, marginTop: 16 }]}>
-        Injury Photo for Pre-Medical Analysis
+        {t('injury_photo')}
       </Text>
       <Text style={[styles.subLabel, { color: theme.textSecondary }]}>
-        Help doctors evaluate the condition before responding
+        {t('photo_sublabel')}
       </Text>
 
       {photo ? (
@@ -183,7 +268,7 @@ export default function CreateRequestScreen() {
             onPress={takePhoto}
           >
             <Ionicons name="camera-outline" size={24} color={theme.primary} />
-            <Text style={[styles.photoPickerText, { color: theme.text }]}>Take Photo</Text>
+            <Text style={[styles.photoPickerText, { color: theme.text }]}>{t('take_photo')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
@@ -191,12 +276,12 @@ export default function CreateRequestScreen() {
             onPress={pickPhoto}
           >
             <Ionicons name="images-outline" size={24} color={theme.primary} />
-            <Text style={[styles.photoPickerText, { color: theme.text }]}>Choose Gallery</Text>
+            <Text style={[styles.photoPickerText, { color: theme.text }]}>{t('choose_gallery')}</Text>
           </TouchableOpacity>
         </View>
       )}
 
-      <Text style={[styles.label, { color: theme.text, marginTop: 20 }]}>Who is this emergency for?</Text>
+      <Text style={[styles.label, { color: theme.text, marginTop: 20 }]}>{t('who_is_emergency_for')}</Text>
       <View style={styles.categoryRow}>
         <TouchableOpacity 
           style={[
@@ -208,7 +293,7 @@ export default function CreateRequestScreen() {
           ]}
           onPress={() => setAnimalCategory('PET')}
         >
-          <Text style={{ color: animalCategory === 'PET' ? '#FFF' : theme.text, fontWeight: 'bold' }}>Owned Pet</Text>
+          <Text style={{ color: animalCategory === 'PET' ? '#FFF' : theme.text, fontWeight: 'bold' }}>{t('owned_pet')}</Text>
         </TouchableOpacity>
         
         <TouchableOpacity 
@@ -224,13 +309,13 @@ export default function CreateRequestScreen() {
             setPetId(undefined);
           }}
         >
-          <Text style={{ color: animalCategory === 'STRAY' ? '#FFF' : theme.text, fontWeight: 'bold' }}>Stray / Street Animal</Text>
+          <Text style={{ color: animalCategory === 'STRAY' ? '#FFF' : theme.text, fontWeight: 'bold' }}>{t('stray_animal')}</Text>
         </TouchableOpacity>
       </View>
 
       {animalCategory === 'PET' && (
         <>
-          <Text style={[styles.label, { color: theme.text, marginTop: 20 }]}>Select Pet (Optional)</Text>
+          <Text style={[styles.label, { color: theme.text, marginTop: 20 }]}>{t('select_pet')}</Text>
           {fetchingPets ? (
             <ActivityIndicator color={theme.primary} />
           ) : (
@@ -264,7 +349,7 @@ export default function CreateRequestScreen() {
         {loading ? (
           <ActivityIndicator color="#FFF" />
         ) : (
-          <Text style={styles.submitBtnText}>Broadcast Emergency Request</Text>
+          <Text style={styles.submitBtnText}>{t('broadcast_emergency')}</Text>
         )}
       </TouchableOpacity>
     </ScrollView>
@@ -379,5 +464,43 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginHorizontal: 5,
+  },
+  animalGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  animalTile: {
+    width: '23%',
+    aspectRatio: 1,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
+    padding: 4,
+  },
+  animalTileText: {
+    fontSize: 11,
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  urgencyRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  urgencyBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    height: 44,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginHorizontal: 3,
   },
 });
