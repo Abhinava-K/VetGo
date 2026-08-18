@@ -12,12 +12,16 @@ import {
   Alert
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import api from '../../services/api';
 import { ThemeContext } from '../../context/ThemeContext';
+import { LANGUAGES, useTranslation } from '../../i18n';
+import LanguageSelectModal from '../../components/LanguageSelectModal';
 
 export default function SignupDoctorScreen() {
-   const [formData, setFormData] = useState({
+  const { t, i18n } = useTranslation();
+  const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
     email: '',
@@ -27,8 +31,12 @@ export default function SignupDoctorScreen() {
   });
   const [selectedDocs, setSelectedDocs] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [langModalVisible, setLangModalVisible] = useState(false);
+
   const navigation = useNavigation<any>();
   const { theme } = useContext(ThemeContext);
+
+  const currentLang = LANGUAGES.find(l => l.code === i18n.language) || LANGUAGES[0];
 
   const pickDocuments = async () => {
     try {
@@ -54,7 +62,7 @@ export default function SignupDoctorScreen() {
   const handleSignup = async () => {
     const { firstName, lastName, email, password, phone, qualifications } = formData;
     if (!firstName || !lastName || !email || !password || !phone || !qualifications) {
-      Alert.alert('Error', 'Please fill in all fields');
+      Alert.alert('Error', t('please_fill_fields'));
       return;
     }
     if (selectedDocs.length === 0) {
@@ -126,10 +134,24 @@ export default function SignupDoctorScreen() {
       style={[styles.container, { backgroundColor: theme.background }]}
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Top Header Bar with Language Picker Pill */}
+        <View style={styles.topHeader}>
+          <TouchableOpacity 
+            style={[styles.langPill, { backgroundColor: theme.surface, borderColor: theme.border }]}
+            onPress={() => setLangModalVisible(true)}
+          >
+            <Ionicons name="globe-outline" size={18} color={theme.primary} style={{ marginRight: 6 }} />
+            <Text style={[styles.langPillText, { color: theme.text }]}>
+              {currentLang.native}
+            </Text>
+            <Ionicons name="chevron-down" size={14} color={theme.textSecondary} style={{ marginLeft: 4 }} />
+          </TouchableOpacity>
+        </View>
+
         <View style={styles.header}>
-          <Text style={[styles.title, { color: theme.secondary }]}>Doctor Registration</Text>
+          <Text style={[styles.title, { color: theme.secondary }]}>{t('doctor_registration')}</Text>
           <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-            Join our network of veterinary professionals
+            {t('join_vet_network')}
           </Text>
         </View>
 
@@ -137,14 +159,14 @@ export default function SignupDoctorScreen() {
           <View style={styles.row}>
             <TextInput
               style={[styles.input, styles.halfInput, { backgroundColor: theme.surface, color: theme.text, borderColor: theme.border }]}
-              placeholder="First Name"
+              placeholder={t('first_name')}
               placeholderTextColor={theme.textSecondary}
               value={formData.firstName}
               onChangeText={(v) => updateField('firstName', v)}
             />
             <TextInput
               style={[styles.input, styles.halfInput, { backgroundColor: theme.surface, color: theme.text, borderColor: theme.border }]}
-              placeholder="Last Name"
+              placeholder={t('last_name')}
               placeholderTextColor={theme.textSecondary}
               value={formData.lastName}
               onChangeText={(v) => updateField('lastName', v)}
@@ -153,7 +175,7 @@ export default function SignupDoctorScreen() {
 
           <TextInput
             style={[styles.input, { backgroundColor: theme.surface, color: theme.text, borderColor: theme.border }]}
-            placeholder="Qualifications (e.g. BVSc & AH, MVSc)"
+            placeholder={t('qualifications_placeholder')}
             placeholderTextColor={theme.textSecondary}
             value={formData.qualifications}
             onChangeText={(v) => updateField('qualifications', v)}
@@ -162,7 +184,7 @@ export default function SignupDoctorScreen() {
 
           <TextInput
             style={[styles.input, { backgroundColor: theme.surface, color: theme.text, borderColor: theme.border }]}
-            placeholder="Email"
+            placeholder={t('email')}
             placeholderTextColor={theme.textSecondary}
             value={formData.email}
             onChangeText={(v) => updateField('email', v)}
@@ -172,7 +194,7 @@ export default function SignupDoctorScreen() {
 
           <TextInput
             style={[styles.input, { backgroundColor: theme.surface, color: theme.text, borderColor: theme.border }]}
-            placeholder="Phone Number"
+            placeholder={t('phone_number')}
             placeholderTextColor={theme.textSecondary}
             value={formData.phone}
             onChangeText={(v) => updateField('phone', v)}
@@ -181,7 +203,7 @@ export default function SignupDoctorScreen() {
 
           <TextInput
             style={[styles.input, { backgroundColor: theme.surface, color: theme.text, borderColor: theme.border }]}
-            placeholder="Password"
+            placeholder={t('password')}
             placeholderTextColor={theme.textSecondary}
             value={formData.password}
             onChangeText={(v) => updateField('password', v)}
@@ -190,13 +212,13 @@ export default function SignupDoctorScreen() {
 
           <View style={styles.uploadBox}>
             <Text style={{ color: theme.textSecondary, marginBottom: 10, fontWeight: 'bold' }}>
-              Upload Degree Certifications / ID proof (Max 3)
+              {t('upload_docs_label')}
             </Text>
             <TouchableOpacity 
               style={[styles.uploadButton, { borderColor: theme.secondary, backgroundColor: `${theme.secondary}12` }]}
               onPress={pickDocuments}
             >
-              <Text style={{ color: theme.secondary, fontWeight: 'bold' }}>Select Documents</Text>
+              <Text style={{ color: theme.secondary, fontWeight: 'bold' }}>{t('select_documents')}</Text>
             </TouchableOpacity>
 
             {selectedDocs.length > 0 && (
@@ -223,7 +245,7 @@ export default function SignupDoctorScreen() {
             {loading ? (
               <ActivityIndicator color="#FFF" />
             ) : (
-              <Text style={styles.buttonText}>Submit Application</Text>
+              <Text style={styles.buttonText}>{t('submit_application')}</Text>
             )}
           </TouchableOpacity>
 
@@ -231,11 +253,17 @@ export default function SignupDoctorScreen() {
             style={styles.footer} 
             onPress={() => navigation.navigate('Login')}
           >
-            <Text style={{ color: theme.textSecondary }}>Already have an account? </Text>
-            <Text style={{ color: theme.secondary, fontWeight: 'bold' }}>Login</Text>
+            <Text style={{ color: theme.textSecondary }}>{t('already_have_account')} </Text>
+            <Text style={{ color: theme.secondary, fontWeight: 'bold' }}>{t('login')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Language Select Modal */}
+      <LanguageSelectModal 
+        visible={langModalVisible}
+        onClose={() => setLangModalVisible(false)}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -246,10 +274,31 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 20,
-    paddingTop: 60,
+    paddingTop: 50,
+  },
+  topHeader: {
+    alignItems: 'flex-end',
+    marginBottom: 20,
+  },
+  langPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 20,
+    borderWidth: 1,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  langPillText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
   header: {
-    marginBottom: 40,
+    marginBottom: 30,
   },
   title: {
     fontSize: 28,

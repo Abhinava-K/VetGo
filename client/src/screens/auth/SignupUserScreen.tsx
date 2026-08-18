@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { 
   StyleSheet, 
   Text, 
@@ -12,11 +12,14 @@ import {
   Alert
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import api from '../../services/api';
 import { ThemeContext } from '../../context/ThemeContext';
-import { useContext } from 'react';
+import { LANGUAGES, useTranslation } from '../../i18n';
+import LanguageSelectModal from '../../components/LanguageSelectModal';
 
 export default function SignupUserScreen() {
+  const { t, i18n } = useTranslation();
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -25,13 +28,17 @@ export default function SignupUserScreen() {
     phone: ''
   });
   const [loading, setLoading] = useState(false);
+  const [langModalVisible, setLangModalVisible] = useState(false);
+
   const navigation = useNavigation<any>();
   const { theme } = useContext(ThemeContext);
+
+  const currentLang = LANGUAGES.find(l => l.code === i18n.language) || LANGUAGES[0];
 
   const handleSignup = async () => {
     const { firstName, lastName, email, password, phone } = formData;
     if (!firstName || !lastName || !email || !password || !phone) {
-      Alert.alert('Error', 'Please fill in all fields');
+      Alert.alert('Error', t('please_fill_fields'));
       return;
     }
 
@@ -66,10 +73,24 @@ export default function SignupUserScreen() {
       style={[styles.container, { backgroundColor: theme.background }]}
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Top Header Bar with Language Picker Pill */}
+        <View style={styles.topHeader}>
+          <TouchableOpacity 
+            style={[styles.langPill, { backgroundColor: theme.surface, borderColor: theme.border }]}
+            onPress={() => setLangModalVisible(true)}
+          >
+            <Ionicons name="globe-outline" size={18} color={theme.primary} style={{ marginRight: 6 }} />
+            <Text style={[styles.langPillText, { color: theme.text }]}>
+              {currentLang.native}
+            </Text>
+            <Ionicons name="chevron-down" size={14} color={theme.textSecondary} style={{ marginLeft: 4 }} />
+          </TouchableOpacity>
+        </View>
+
         <View style={styles.header}>
-          <Text style={[styles.title, { color: theme.primary }]}>Create Account</Text>
+          <Text style={[styles.title, { color: theme.primary }]}>{t('create_account')}</Text>
           <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-            Join the VetGo community
+            {t('join_community')}
           </Text>
         </View>
 
@@ -77,14 +98,14 @@ export default function SignupUserScreen() {
           <View style={styles.row}>
             <TextInput
               style={[styles.input, styles.halfInput, { backgroundColor: theme.surface, color: theme.text, borderColor: theme.border }]}
-              placeholder="First Name"
+              placeholder={t('first_name')}
               placeholderTextColor={theme.textSecondary}
               value={formData.firstName}
               onChangeText={(v) => updateField('firstName', v)}
             />
             <TextInput
               style={[styles.input, styles.halfInput, { backgroundColor: theme.surface, color: theme.text, borderColor: theme.border }]}
-              placeholder="Last Name"
+              placeholder={t('last_name')}
               placeholderTextColor={theme.textSecondary}
               value={formData.lastName}
               onChangeText={(v) => updateField('lastName', v)}
@@ -93,7 +114,7 @@ export default function SignupUserScreen() {
 
           <TextInput
             style={[styles.input, { backgroundColor: theme.surface, color: theme.text, borderColor: theme.border }]}
-            placeholder="Email"
+            placeholder={t('email')}
             placeholderTextColor={theme.textSecondary}
             value={formData.email}
             onChangeText={(v) => updateField('email', v)}
@@ -103,7 +124,7 @@ export default function SignupUserScreen() {
 
           <TextInput
             style={[styles.input, { backgroundColor: theme.surface, color: theme.text, borderColor: theme.border }]}
-            placeholder="Phone Number"
+            placeholder={t('phone_number')}
             placeholderTextColor={theme.textSecondary}
             value={formData.phone}
             onChangeText={(v) => updateField('phone', v)}
@@ -112,7 +133,7 @@ export default function SignupUserScreen() {
 
           <TextInput
             style={[styles.input, { backgroundColor: theme.surface, color: theme.text, borderColor: theme.border }]}
-            placeholder="Password"
+            placeholder={t('password')}
             placeholderTextColor={theme.textSecondary}
             value={formData.password}
             onChangeText={(v) => updateField('password', v)}
@@ -127,7 +148,7 @@ export default function SignupUserScreen() {
             {loading ? (
               <ActivityIndicator color="#FFF" />
             ) : (
-              <Text style={styles.buttonText}>Sign Up</Text>
+              <Text style={styles.buttonText}>{t('sign_up')}</Text>
             )}
           </TouchableOpacity>
 
@@ -135,11 +156,17 @@ export default function SignupUserScreen() {
             style={styles.footer} 
             onPress={() => navigation.navigate('Login')}
           >
-            <Text style={{ color: theme.textSecondary }}>Already have an account? </Text>
-            <Text style={{ color: theme.primary, fontWeight: 'bold' }}>Login</Text>
+            <Text style={{ color: theme.textSecondary }}>{t('already_have_account')} </Text>
+            <Text style={{ color: theme.primary, fontWeight: 'bold' }}>{t('login')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Language Select Modal */}
+      <LanguageSelectModal 
+        visible={langModalVisible}
+        onClose={() => setLangModalVisible(false)}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -150,10 +177,31 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 20,
-    paddingTop: 60,
+    paddingTop: 50,
+  },
+  topHeader: {
+    alignItems: 'flex-end',
+    marginBottom: 20,
+  },
+  langPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 20,
+    borderWidth: 1,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  langPillText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
   header: {
-    marginBottom: 40,
+    marginBottom: 30,
   },
   title: {
     fontSize: 32,

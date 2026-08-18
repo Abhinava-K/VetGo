@@ -7,15 +7,15 @@ import {
   Switch, 
   ScrollView, 
   ActivityIndicator, 
-  Alert,
-  Modal
+  Alert
 } from 'react-native';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemeContext } from '../../context/ThemeContext';
 import { AuthContext } from '../../context/AuthContext';
 import api from '../../services/api';
-import { LANGUAGES, changeAppLanguage, useTranslation } from '../../i18n';
+import { LANGUAGES, useTranslation } from '../../i18n';
+import LanguageSelectModal from '../../components/LanguageSelectModal';
 
 export default function ProfileScreen() {
   const { t, i18n } = useTranslation();
@@ -268,67 +268,10 @@ export default function ProfileScreen() {
       </View>
 
       {/* Language Selection Modal */}
-      <Modal
+      <LanguageSelectModal 
         visible={langModalVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setLangModalVisible(false)}
-      >
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
-          <View style={{ backgroundColor: theme.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: '80%' }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <Text style={{ fontSize: 20, fontWeight: 'bold', color: theme.text }}>
-                {t('select_language')}
-              </Text>
-              <TouchableOpacity onPress={() => setLangModalVisible(false)}>
-                <Ionicons name="close-circle-outline" size={28} color={theme.textSecondary} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView showsVerticalScrollIndicator={false}>
-              {LANGUAGES.map((lang) => {
-                const isSelected = i18n.language === lang.code;
-                return (
-                  <TouchableOpacity
-                    key={lang.code}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      paddingVertical: 14,
-                      paddingHorizontal: 16,
-                      borderRadius: 12,
-                      borderWidth: 1.5,
-                      borderColor: isSelected ? theme.primary : theme.border,
-                      backgroundColor: isSelected ? `${theme.primary}15` : theme.background,
-                      marginBottom: 10,
-                    }}
-                    onPress={() => {
-                      changeAppLanguage(lang.code);
-                      setLangModalVisible(false);
-                    }}
-                  >
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <Text style={{ fontSize: 24, marginRight: 14 }}>{lang.flag}</Text>
-                      <View>
-                        <Text style={{ fontSize: 16, fontWeight: 'bold', color: theme.text }}>
-                          {lang.native}
-                        </Text>
-                        <Text style={{ fontSize: 12, color: theme.textSecondary }}>
-                          {lang.name}
-                        </Text>
-                      </View>
-                    </View>
-                    {isSelected && (
-                      <Ionicons name="checkmark-circle" size={24} color={theme.primary} />
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
+        onClose={() => setLangModalVisible(false)}
+      />
 
       {/* Action Row */}
       <TouchableOpacity 

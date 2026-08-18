@@ -15,20 +15,26 @@ import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../../services/api';
 import { ThemeContext } from '../../context/ThemeContext';
+import { LANGUAGES, useTranslation } from '../../i18n';
+import LanguageSelectModal from '../../components/LanguageSelectModal';
 
 export default function ForgotPasswordScreen() {
+  const { t, i18n } = useTranslation();
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [langModalVisible, setLangModalVisible] = useState(false);
 
   const navigation = useNavigation<any>();
   const { theme } = useContext(ThemeContext);
 
+  const currentLang = LANGUAGES.find(l => l.code === i18n.language) || LANGUAGES[0];
+
   const handleResetPassword = async () => {
     if (!email || !phone || !newPassword || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all fields');
+      Alert.alert('Error', t('please_fill_fields'));
       return;
     }
 
@@ -76,22 +82,36 @@ export default function ForgotPasswordScreen() {
       style={[styles.container, { backgroundColor: theme.background }]}
     >
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Ionicons name="arrow-back" size={24} color={theme.text} />
-        </TouchableOpacity>
+        {/* Navigation & Language Row */}
+        <View style={styles.navRow}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Ionicons name="arrow-back" size={24} color={theme.text} />
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.langPill, { backgroundColor: theme.surface, borderColor: theme.border }]}
+            onPress={() => setLangModalVisible(true)}
+          >
+            <Ionicons name="globe-outline" size={18} color={theme.primary} style={{ marginRight: 6 }} />
+            <Text style={[styles.langPillText, { color: theme.text }]}>
+              {currentLang.native}
+            </Text>
+            <Ionicons name="chevron-down" size={14} color={theme.textSecondary} style={{ marginLeft: 4 }} />
+          </TouchableOpacity>
+        </View>
 
         <View style={styles.header}>
-          <Text style={[styles.title, { color: theme.primary }]}>Reset Password</Text>
+          <Text style={[styles.title, { color: theme.primary }]}>{t('reset_password')}</Text>
           <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-            Verify your registered phone number to reset your password.
+            {t('verify_phone_reset_sub')}
           </Text>
         </View>
 
         <View style={styles.form}>
-          <Text style={[styles.label, { color: theme.text }]}>Email Address</Text>
+          <Text style={[styles.label, { color: theme.text }]}>{t('email')}</Text>
           <TextInput
             style={[
               styles.input,
@@ -109,7 +129,7 @@ export default function ForgotPasswordScreen() {
             keyboardType="email-address"
           />
 
-          <Text style={[styles.label, { color: theme.text }]}>Registered Phone Number</Text>
+          <Text style={[styles.label, { color: theme.text }]}>{t('registered_phone_number')}</Text>
           <TextInput
             style={[
               styles.input,
@@ -119,14 +139,14 @@ export default function ForgotPasswordScreen() {
                 borderColor: theme.border,
               },
             ]}
-            placeholder="Enter phone number used at signup"
+            placeholder={t('enter_phone_signup')}
             placeholderTextColor={theme.textSecondary}
             value={phone}
             onChangeText={setPhone}
             keyboardType="phone-pad"
           />
 
-          <Text style={[styles.label, { color: theme.text }]}>New Password</Text>
+          <Text style={[styles.label, { color: theme.text }]}>{t('new_password')}</Text>
           <TextInput
             style={[
               styles.input,
@@ -136,14 +156,14 @@ export default function ForgotPasswordScreen() {
                 borderColor: theme.border,
               },
             ]}
-            placeholder="Enter new password (min 6 characters)"
+            placeholder={t('min_pass_chars')}
             placeholderTextColor={theme.textSecondary}
             value={newPassword}
             onChangeText={setNewPassword}
             secureTextEntry
           />
 
-          <Text style={[styles.label, { color: theme.text }]}>Confirm New Password</Text>
+          <Text style={[styles.label, { color: theme.text }]}>{t('confirm_new_password')}</Text>
           <TextInput
             style={[
               styles.input,
@@ -153,7 +173,7 @@ export default function ForgotPasswordScreen() {
                 borderColor: theme.border,
               },
             ]}
-            placeholder="Re-enter new password"
+            placeholder={t('reenter_new_password')}
             placeholderTextColor={theme.textSecondary}
             value={confirmPassword}
             onChangeText={setConfirmPassword}
@@ -168,7 +188,7 @@ export default function ForgotPasswordScreen() {
             {loading ? (
               <ActivityIndicator color="#FFF" />
             ) : (
-              <Text style={styles.buttonText}>Reset Password</Text>
+              <Text style={styles.buttonText}>{t('reset_password')}</Text>
             )}
           </TouchableOpacity>
 
@@ -176,10 +196,16 @@ export default function ForgotPasswordScreen() {
             style={styles.cancelLink}
             onPress={() => navigation.navigate('Login')}
           >
-            <Text style={{ color: theme.textSecondary }}>Back to Login</Text>
+            <Text style={{ color: theme.textSecondary }}>{t('back_to_login')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Language Select Modal */}
+      <LanguageSelectModal 
+        visible={langModalVisible}
+        onClose={() => setLangModalVisible(false)}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -190,17 +216,39 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 24,
-    paddingTop: 60,
+    paddingTop: 50,
+  },
+  navRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
   },
   backButton: {
-    marginBottom: 20,
     width: 40,
     height: 40,
     borderRadius: 20,
     justifyContent: 'center',
   },
+  langPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 20,
+    borderWidth: 1,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  langPillText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
   header: {
-    marginBottom: 30,
+    marginBottom: 25,
   },
   title: {
     fontSize: 32,
