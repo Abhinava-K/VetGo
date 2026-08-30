@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ThemeContext } from '../../context/ThemeContext';
 import api from '../../services/api';
 import ReportModal from '../../components/common/ReportModal';
+import TranslatedText from '../../components/common/TranslatedText';
 import { useTranslation } from '../../i18n';
 
 export default function RequestsScreen() {
@@ -265,7 +266,7 @@ export default function RequestsScreen() {
               {/* Modal Header */}
               <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
                 <View>
-                  <Text style={[styles.modalTitle, { color: theme.text }]}>Case Record Transcript</Text>
+                  <Text style={[styles.modalTitle, { color: theme.text }]}>{t('case_record_transcript')}</Text>
                   <Text style={{ fontSize: 12, color: theme.textSecondary }}>
                     ID: {selectedCase._id}
                   </Text>
@@ -312,13 +313,13 @@ export default function RequestsScreen() {
                     </Text>
                   </View>
                   <Text style={{ color: theme.textSecondary, fontSize: 13 }}>
-                    Logged on {new Date(selectedCase.createdAt).toLocaleString()}
+                    {t('logged_on')} {new Date(selectedCase.createdAt).toLocaleString()}
                   </Text>
                 </View>
 
                 {/* Doctor Contact Info */}
                 <View style={[styles.modalSectionCard, { backgroundColor: theme.background, borderColor: theme.border }]}>
-                  <Text style={[styles.sectionHeading, { color: theme.textSecondary }]}>ASSIGNED VETERINARIAN</Text>
+                  <Text style={[styles.sectionHeading, { color: theme.textSecondary }]}>{t('assigned_veterinarian')}</Text>
                   <View style={styles.reporterRow}>
                     <Ionicons name="medical-outline" size={32} color={theme.primary} />
                     <View style={{ flex: 1, marginLeft: 10 }}>
@@ -341,7 +342,7 @@ export default function RequestsScreen() {
                         onPress={() => handleCallDoctor(selectedCase.doctorPhone)}
                       >
                         <Ionicons name="call" size={16} color="#FFF" />
-                        <Text style={styles.callBtnText}>Call</Text>
+                        <Text style={styles.callBtnText}>{t('call')}</Text>
                       </TouchableOpacity>
                     ) : null}
                   </View>
@@ -349,20 +350,21 @@ export default function RequestsScreen() {
 
                 {/* Emergency Description Transcript */}
                 <View style={[styles.modalSectionCard, { backgroundColor: theme.background, borderColor: theme.border }]}>
-                  <Text style={[styles.sectionHeading, { color: theme.textSecondary }]}>EMERGENCY DESCRIPTION</Text>
-                  <Text style={[styles.descriptionFullText, { color: theme.text }]}>
-                    {selectedCase.description}
-                  </Text>
+                  <Text style={[styles.sectionHeading, { color: theme.textSecondary }]}>{t('emergency_description')}</Text>
+                  <TranslatedText 
+                    text={selectedCase.description} 
+                    style={[styles.descriptionFullText, { color: theme.text }]} 
+                  />
 
                   {/* Animal Info */}
                   <View style={styles.animalInfoBox}>
                     <Ionicons name="paw" size={18} color={theme.primary} style={{ marginRight: 8 }} />
                     <Text style={{ color: theme.text, fontWeight: '600', fontSize: 13 }}>
                       {selectedCase.animalCategory === 'STRAY'
-                        ? 'Stray / Street Animal'
+                        ? t('stray_animal')
                         : selectedCase.petId?.name
-                        ? `Owned Pet: ${selectedCase.petId.name} (${selectedCase.petId.species})`
-                        : 'Owned Pet'}
+                        ? `${t('owned_pet')}: ${selectedCase.petId.name} (${selectedCase.petId.species})`
+                        : t('owned_pet')}
                     </Text>
                   </View>
                 </View>
@@ -370,7 +372,7 @@ export default function RequestsScreen() {
                 {/* GPS Location & Navigation */}
                 {selectedCase.location?.coordinates && (
                   <View style={[styles.modalSectionCard, { backgroundColor: theme.background, borderColor: theme.border }]}>
-                    <Text style={[styles.sectionHeading, { color: theme.textSecondary }]}>BROADCAST GPS LOCATION</Text>
+                    <Text style={[styles.sectionHeading, { color: theme.textSecondary }]}>{t('broadcast_gps_location')}</Text>
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
                         <Ionicons name="location-sharp" size={22} color="#EF4444" style={{ marginRight: 6 }} />
@@ -383,7 +385,7 @@ export default function RequestsScreen() {
                         onPress={() => handleOpenMap(selectedCase.location.coordinates)}
                       >
                         <Ionicons name="map" size={14} color="#FFF" style={{ marginRight: 4 }} />
-                        <Text style={{ color: '#FFF', fontSize: 12, fontWeight: 'bold' }}>Map</Text>
+                        <Text style={{ color: '#FFF', fontSize: 12, fontWeight: 'bold' }}>{t('map_btn')}</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -392,7 +394,7 @@ export default function RequestsScreen() {
                 {/* Injury Photo */}
                 {getImageUrl(selectedCase.photoUrl) && (
                   <View style={[styles.modalSectionCard, { backgroundColor: theme.background, borderColor: theme.border }]}>
-                    <Text style={[styles.sectionHeading, { color: theme.textSecondary }]}>INJURY PHOTO</Text>
+                    <Text style={[styles.sectionHeading, { color: theme.textSecondary }]}>{t('injury_photo_label')}</Text>
                     <TouchableOpacity 
                       style={styles.modalPhotoContainer}
                       onPress={() => setZoomImage(getImageUrl(selectedCase.photoUrl))}
@@ -401,7 +403,7 @@ export default function RequestsScreen() {
                       <Image source={{ uri: getImageUrl(selectedCase.photoUrl)! }} style={styles.modalPhoto} />
                       <View style={styles.photoOverlay}>
                         <Ionicons name="expand-outline" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
-                        <Text style={styles.photoOverlayText}>Injury Photo (Tap to inspect)</Text>
+                        <Text style={styles.photoOverlayText}>{t('injury_photo_inspect')}</Text>
                       </View>
                     </TouchableOpacity>
                   </View>
@@ -410,17 +412,18 @@ export default function RequestsScreen() {
                 {/* Doctor Resolution / Treatment Notes */}
                 {selectedCase.resolutionNotes ? (
                   <View style={[styles.modalSectionCard, { backgroundColor: `${theme.primary}0F`, borderColor: theme.primary }]}>
-                    <Text style={[styles.sectionHeading, { color: theme.primary }]}>TREATMENT & RESOLUTION NOTES</Text>
-                    <Text style={[styles.descriptionFullText, { color: theme.text }]}>
-                      {selectedCase.resolutionNotes}
-                    </Text>
+                    <Text style={[styles.sectionHeading, { color: theme.primary }]}>{t('treatment_resolution_notes')}</Text>
+                    <TranslatedText 
+                      text={selectedCase.resolutionNotes} 
+                      style={[styles.descriptionFullText, { color: theme.text }]} 
+                    />
                   </View>
                 ) : null}
 
                 {/* User Review & Feedback Rating */}
                 {selectedCase.rating && selectedCase.rating.score ? (
                   <View style={[styles.modalSectionCard, { backgroundColor: '#FEF3C72A', borderColor: '#F59E0B' }]}>
-                    <Text style={[styles.sectionHeading, { color: '#B45309' }]}>YOUR FEEDBACK & RATING</Text>
+                    <Text style={[styles.sectionHeading, { color: '#B45309' }]}>{t('your_feedback_rating')}</Text>
                     <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 6 }}>
                       {renderStars(selectedCase.rating.score)}
                       <Text style={{ marginLeft: 8, fontWeight: 'bold', color: '#B45309', fontSize: 15 }}>
@@ -428,9 +431,10 @@ export default function RequestsScreen() {
                       </Text>
                     </View>
                     {selectedCase.rating.review ? (
-                      <Text style={{ color: theme.text, fontStyle: 'italic', fontSize: 14, lineHeight: 20 }}>
-                        "{selectedCase.rating.review}"
-                      </Text>
+                      <TranslatedText 
+                        text={`"${selectedCase.rating.review}"`} 
+                        style={{ color: theme.text, fontStyle: 'italic', fontSize: 14, lineHeight: 20 }} 
+                      />
                     ) : null}
                   </View>
                 ) : null}

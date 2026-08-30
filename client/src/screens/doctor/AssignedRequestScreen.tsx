@@ -19,6 +19,7 @@ import { ThemeContext } from '../../context/ThemeContext';
 import api from '../../services/api';
 import { initSocket } from '../../services/socket';
 import ReportModal from '../../components/common/ReportModal';
+import TranslatedText from '../../components/common/TranslatedText';
 
 export default function AssignedRequestScreen() {
   const [request, setRequest] = useState<any>(null);
@@ -184,9 +185,10 @@ export default function AssignedRequestScreen() {
           <Text style={[styles.cardSectionLabel, { color: theme.textSecondary }]}>
             EMERGENCY DESCRIPTION
           </Text>
-          <Text style={[styles.descriptionText, { color: theme.text }]}>
-            {request?.description || 'No description provided.'}
-          </Text>
+          <TranslatedText 
+            text={request?.description || 'No description provided.'} 
+            style={[styles.descriptionText, { color: theme.text }]} 
+          />
 
           {photoFullUrl && (
             <View style={styles.injuryPhotoBox}>

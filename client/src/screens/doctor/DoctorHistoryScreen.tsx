@@ -19,8 +19,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { ThemeContext } from '../../context/ThemeContext';
 import api from '../../services/api';
 import ReportModal from '../../components/common/ReportModal';
+import TranslatedText from '../../components/common/TranslatedText';
+import { useTranslation } from '../../i18n';
 
 export default function DoctorHistoryScreen() {
+  const { t } = useTranslation();
   const { theme } = useContext(ThemeContext);
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
@@ -265,7 +268,7 @@ export default function DoctorHistoryScreen() {
               {/* Modal Header */}
               <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
                 <View>
-                  <Text style={[styles.modalTitle, { color: theme.text }]}>Case Record Transcript</Text>
+                  <Text style={[styles.modalTitle, { color: theme.text }]}>{t('case_record_transcript')}</Text>
                   <Text style={{ fontSize: 12, color: theme.textSecondary }}>
                     ID: {selectedCase._id}
                   </Text>
@@ -312,13 +315,13 @@ export default function DoctorHistoryScreen() {
                     </Text>
                   </View>
                   <Text style={{ color: theme.textSecondary, fontSize: 13 }}>
-                    Logged on {new Date(selectedCase.createdAt).toLocaleString()}
+                    {t('logged_on')} {new Date(selectedCase.createdAt).toLocaleString()}
                   </Text>
                 </View>
 
                 {/* Reporter & Contact Info */}
                 <View style={[styles.modalSectionCard, { backgroundColor: theme.background, borderColor: theme.border }]}>
-                  <Text style={[styles.sectionHeading, { color: theme.textSecondary }]}>PATIENT / REPORTER INFORMATION</Text>
+                  <Text style={[styles.sectionHeading, { color: theme.textSecondary }]}>{t('patient_reporter_info')}</Text>
                   <View style={styles.reporterRow}>
                     <Ionicons name="person-circle-outline" size={32} color={theme.primary} />
                     <View style={{ flex: 1, marginLeft: 10 }}>
@@ -339,7 +342,7 @@ export default function DoctorHistoryScreen() {
                         onPress={() => handleCallUser(selectedCase.userPhone)}
                       >
                         <Ionicons name="call" size={16} color="#FFF" />
-                        <Text style={styles.callBtnText}>Call</Text>
+                        <Text style={styles.callBtnText}>{t('call')}</Text>
                       </TouchableOpacity>
                     ) : null}
                   </View>
@@ -347,20 +350,21 @@ export default function DoctorHistoryScreen() {
 
                 {/* Emergency Description Transcript */}
                 <View style={[styles.modalSectionCard, { backgroundColor: theme.background, borderColor: theme.border }]}>
-                  <Text style={[styles.sectionHeading, { color: theme.textSecondary }]}>EMERGENCY DESCRIPTION</Text>
-                  <Text style={[styles.descriptionFullText, { color: theme.text }]}>
-                    {selectedCase.description}
-                  </Text>
+                  <Text style={[styles.sectionHeading, { color: theme.textSecondary }]}>{t('emergency_description')}</Text>
+                  <TranslatedText 
+                    text={selectedCase.description} 
+                    style={[styles.descriptionFullText, { color: theme.text }]} 
+                  />
 
                   {/* Animal Info */}
                   <View style={styles.animalInfoBox}>
                     <Ionicons name="paw" size={18} color={theme.primary} style={{ marginRight: 8 }} />
                     <Text style={{ color: theme.text, fontWeight: '600', fontSize: 13 }}>
                       {selectedCase.animalCategory === 'STRAY'
-                        ? 'Stray / Street Animal'
+                        ? t('stray_animal')
                         : selectedCase.petId?.name
-                        ? `Owned Pet: ${selectedCase.petId.name} (${selectedCase.petId.species})`
-                        : 'Owned Pet'}
+                        ? `${t('owned_pet')}: ${selectedCase.petId.name} (${selectedCase.petId.species})`
+                        : t('owned_pet')}
                     </Text>
                   </View>
                 </View>
@@ -368,7 +372,7 @@ export default function DoctorHistoryScreen() {
                 {/* GPS Location & Navigation */}
                 {selectedCase.location?.coordinates && (
                   <View style={[styles.modalSectionCard, { backgroundColor: theme.background, borderColor: theme.border }]}>
-                    <Text style={[styles.sectionHeading, { color: theme.textSecondary }]}>BROADCAST GPS LOCATION</Text>
+                    <Text style={[styles.sectionHeading, { color: theme.textSecondary }]}>{t('broadcast_gps_location')}</Text>
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
                         <Ionicons name="location-sharp" size={22} color="#EF4444" style={{ marginRight: 6 }} />
@@ -381,7 +385,7 @@ export default function DoctorHistoryScreen() {
                         onPress={() => handleOpenMap(selectedCase.location.coordinates)}
                       >
                         <Ionicons name="map" size={14} color="#FFF" style={{ marginRight: 4 }} />
-                        <Text style={{ color: '#FFF', fontSize: 12, fontWeight: 'bold' }}>Map</Text>
+                        <Text style={{ color: '#FFF', fontSize: 12, fontWeight: 'bold' }}>{t('map_btn')}</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -390,7 +394,7 @@ export default function DoctorHistoryScreen() {
                 {/* Injury Photo */}
                 {getImageUrl(selectedCase.photoUrl) && (
                   <View style={[styles.modalSectionCard, { backgroundColor: theme.background, borderColor: theme.border }]}>
-                    <Text style={[styles.sectionHeading, { color: theme.textSecondary }]}>INJURY PHOTO</Text>
+                    <Text style={[styles.sectionHeading, { color: theme.textSecondary }]}>{t('injury_photo_label')}</Text>
                     <TouchableOpacity 
                       style={styles.modalPhotoContainer}
                       onPress={() => setZoomImage(getImageUrl(selectedCase.photoUrl))}
@@ -399,7 +403,7 @@ export default function DoctorHistoryScreen() {
                       <Image source={{ uri: getImageUrl(selectedCase.photoUrl)! }} style={styles.modalPhoto} />
                       <View style={styles.photoOverlay}>
                         <Ionicons name="expand-outline" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
-                        <Text style={styles.photoOverlayText}>Injury Photo (Tap to inspect)</Text>
+                        <Text style={styles.photoOverlayText}>{t('injury_photo_inspect')}</Text>
                       </View>
                     </TouchableOpacity>
                   </View>
@@ -408,17 +412,18 @@ export default function DoctorHistoryScreen() {
                 {/* Doctor Resolution / Treatment Notes */}
                 {selectedCase.resolutionNotes ? (
                   <View style={[styles.modalSectionCard, { backgroundColor: `${theme.primary}0F`, borderColor: theme.primary }]}>
-                    <Text style={[styles.sectionHeading, { color: theme.primary }]}>TREATMENT & RESOLUTION NOTES</Text>
-                    <Text style={[styles.descriptionFullText, { color: theme.text }]}>
-                      {selectedCase.resolutionNotes}
-                    </Text>
+                    <Text style={[styles.sectionHeading, { color: theme.primary }]}>{t('treatment_resolution_notes')}</Text>
+                    <TranslatedText 
+                      text={selectedCase.resolutionNotes} 
+                      style={[styles.descriptionFullText, { color: theme.text }]} 
+                    />
                   </View>
                 ) : null}
 
                 {/* User Review & Feedback Rating */}
                 {selectedCase.rating && selectedCase.rating.score ? (
                   <View style={[styles.modalSectionCard, { backgroundColor: '#FEF3C72A', borderColor: '#F59E0B' }]}>
-                    <Text style={[styles.sectionHeading, { color: '#B45309' }]}>USER FEEDBACK & RATING</Text>
+                    <Text style={[styles.sectionHeading, { color: '#B45309' }]}>{t('user_feedback_rating')}</Text>
                     <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 6 }}>
                       {renderStars(selectedCase.rating.score)}
                       <Text style={{ marginLeft: 8, fontWeight: 'bold', color: '#B45309', fontSize: 15 }}>
@@ -426,9 +431,10 @@ export default function DoctorHistoryScreen() {
                       </Text>
                     </View>
                     {selectedCase.rating.review ? (
-                      <Text style={{ color: theme.text, fontStyle: 'italic', fontSize: 14, lineHeight: 20 }}>
-                        "{selectedCase.rating.review}"
-                      </Text>
+                      <TranslatedText 
+                        text={`"${selectedCase.rating.review}"`} 
+                        style={{ color: theme.text, fontStyle: 'italic', fontSize: 14, lineHeight: 20 }} 
+                      />
                     ) : null}
                   </View>
                 ) : null}
@@ -436,7 +442,7 @@ export default function DoctorHistoryScreen() {
                 {/* Report Section in Transcript Window */}
                 {selectedCase.hasReported ? (
                   <View style={{ marginTop: 14 }}>
-                    {/* Yellow Under Review Box (Black Text for High Visibility) */}
+                    {/* Yellow Under Review Box */}
                     <View style={{ backgroundColor: '#FEF3C7', borderColor: '#F59E0B', borderWidth: 1.5, borderRadius: 12, padding: 14, marginBottom: 10 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
                         <Ionicons 
@@ -447,10 +453,10 @@ export default function DoctorHistoryScreen() {
                         />
                         <Text style={{ fontWeight: '800', fontSize: 14, color: '#000000' }}>
                           {selectedCase.userReport?.status === 'PENDING'
-                            ? 'Report Under Review'
+                            ? t('report_under_review')
                             : selectedCase.userReport?.status === 'RESOLVED'
-                            ? 'Report Resolved & Action Taken'
-                            : 'Report Reviewed & Closed'}
+                            ? t('report_resolved')
+                            : t('report_closed')}
                         </Text>
                       </View>
                       <Text style={{ fontSize: 13, color: '#000000', lineHeight: 18, fontWeight: '500' }}>
@@ -465,19 +471,20 @@ export default function DoctorHistoryScreen() {
                     {/* Submitted Report Details */}
                     {selectedCase.userReport ? (
                       <View style={{ backgroundColor: theme.background, borderColor: theme.border, borderWidth: 1, borderRadius: 12, padding: 12, marginBottom: 12 }}>
-                        <Text style={{ fontSize: 11, fontWeight: '800', color: theme.textSecondary }}>SUBMITTED REPORT DETAILS</Text>
+                        <Text style={{ fontSize: 11, fontWeight: '800', color: theme.textSecondary }}>{t('submitted_report_details')}</Text>
                         <Text style={{ fontSize: 13, fontWeight: '600', color: theme.text, marginTop: 4 }}>
                           Category: {selectedCase.userReport.category ? selectedCase.userReport.category.replace(/_/g, ' ') : 'Safety Issue'}
                         </Text>
                         {selectedCase.userReport.description ? (
-                          <Text style={{ fontSize: 13, color: theme.text, fontStyle: 'italic', marginTop: 4 }}>
-                            "{selectedCase.userReport.description}"
-                          </Text>
+                          <TranslatedText 
+                            text={`"${selectedCase.userReport.description}"`} 
+                            style={{ fontSize: 13, color: theme.text, fontStyle: 'italic', marginTop: 4 }} 
+                          />
                         ) : null}
                         {selectedCase.userReport.adminNotes ? (
                           <View style={{ marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: theme.border }}>
                             <Text style={{ fontSize: 12, fontWeight: 'bold', color: theme.primary }}>💬 Management Response Note:</Text>
-                            <Text style={{ fontSize: 13, color: theme.text, marginTop: 2 }}>{selectedCase.userReport.adminNotes}</Text>
+                            <TranslatedText text={selectedCase.userReport.adminNotes} style={{ fontSize: 13, color: theme.text, marginTop: 2 }} />
                           </View>
                         ) : null}
                       </View>
@@ -491,7 +498,7 @@ export default function DoctorHistoryScreen() {
                       <View style={{ backgroundColor: '#16A34A', width: 20, height: 20, borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginRight: 8 }}>
                         <Ionicons name="checkmark-sharp" size={13} color="#FFFFFF" />
                       </View>
-                      <Text style={[styles.modalReportBtnText, { color: '#15803D', fontWeight: 'bold' }]}>Report Already Sent ✓</Text>
+                      <Text style={[styles.modalReportBtnText, { color: '#15803D', fontWeight: 'bold' }]}>{t('report_already_sent')}</Text>
                     </TouchableOpacity>
                   </View>
                 ) : (
@@ -500,7 +507,7 @@ export default function DoctorHistoryScreen() {
                     onPress={() => setReportModalVisible(true)}
                   >
                     <Ionicons name="flag" size={16} color="#DC2626" style={{ marginRight: 6 }} />
-                    <Text style={styles.modalReportBtnText}>Report Post-Service Safety Concern</Text>
+                    <Text style={styles.modalReportBtnText}>{t('report_safety_concern')}</Text>
                   </TouchableOpacity>
                 )}
               </ScrollView>

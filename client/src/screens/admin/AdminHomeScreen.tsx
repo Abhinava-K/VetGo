@@ -22,6 +22,7 @@ import { ThemeContext } from '../../context/ThemeContext';
 import { AuthContext } from '../../context/AuthContext';
 import api from '../../services/api';
 import SlideButton from '../../components/common/SlideButton';
+import TranslatedText from '../../components/common/TranslatedText';
 
 type TabType = 'applications' | 'requests' | 'reports' | 'stats';
 
@@ -1673,9 +1674,10 @@ export default function AdminHomeScreen({ route }: AdminHomeScreenProps = {}) {
                 {/* Emergency Description */}
                 <View style={[styles.tsSectionCard, { backgroundColor: theme.background, borderColor: theme.border }]}>
                   <Text style={[styles.tsSectionHeading, { color: theme.textSecondary }]}>EMERGENCY DESCRIPTION</Text>
-                  <Text style={[styles.tsDescText, { color: theme.text }]}>
-                    {selectedTranscriptCase.description || 'No description provided.'}
-                  </Text>
+                  <TranslatedText 
+                    text={selectedTranscriptCase.description || 'No description provided.'} 
+                    style={[styles.tsDescText, { color: theme.text }]} 
+                  />
 
                   {/* Animal Info */}
                   <View style={styles.tsAnimalBox}>
@@ -1734,9 +1736,10 @@ export default function AdminHomeScreen({ route }: AdminHomeScreenProps = {}) {
                 {selectedTranscriptCase.resolutionNotes ? (
                   <View style={[styles.tsSectionCard, { backgroundColor: `${theme.primary}0F`, borderColor: theme.primary }]}>
                     <Text style={[styles.tsSectionHeading, { color: theme.primary }]}>TREATMENT & RESOLUTION NOTES</Text>
-                    <Text style={[styles.tsDescText, { color: theme.text }]}>
-                      {selectedTranscriptCase.resolutionNotes}
-                    </Text>
+                    <TranslatedText 
+                      text={selectedTranscriptCase.resolutionNotes} 
+                      style={[styles.tsDescText, { color: theme.text }]} 
+                    />
                   </View>
                 ) : null}
 

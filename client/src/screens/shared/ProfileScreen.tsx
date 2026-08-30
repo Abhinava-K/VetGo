@@ -67,23 +67,23 @@ export default function ProfileScreen() {
 
   const handleLogoutPress = () => {
     Alert.alert(
-      'Logout',
-      'Are you sure you want to log out of VetGo?',
+      t('logout_confirm_title'),
+      t('logout_confirm_msg'),
       [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Logout', style: 'destructive', onPress: logout }
+        { text: t('cancel'), style: 'cancel' },
+        { text: t('logout'), style: 'destructive', onPress: logout }
       ]
     );
   };
 
   const handleDeleteAccountPress = () => {
     Alert.alert(
-      'Delete Account',
-      'Are you sure you want to permanently delete your account and personal data? Your rescue history will be saved anonymously. This action cannot be undone.',
+      t('delete_account_title'),
+      t('delete_account_msg'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('cancel'), style: 'cancel' },
         { 
-          text: 'Delete Account', 
+          text: t('delete_account'), 
           style: 'destructive', 
           onPress: async () => {
             try {
@@ -279,7 +279,7 @@ export default function ProfileScreen() {
         onPress={handleLogoutPress}
       >
         <Feather name="log-out" size={20} color={theme.error} style={{ marginRight: 10 }} />
-        <Text style={[styles.logoutText, { color: theme.error }]}>Log Out of VetGo</Text>
+        <Text style={[styles.logoutText, { color: theme.error }]}>{t('logout')}</Text>
       </TouchableOpacity>
 
       <TouchableOpacity 
@@ -287,7 +287,7 @@ export default function ProfileScreen() {
         onPress={handleDeleteAccountPress}
       >
         <Feather name="trash-2" size={20} color="#FFFFFF" style={{ marginRight: 10 }} />
-        <Text style={[styles.deleteText, { color: '#FFFFFF' }]}>Delete Account</Text>
+        <Text style={[styles.deleteText, { color: '#FFFFFF' }]}>{t('delete_account')}</Text>
       </TouchableOpacity>
     </ScrollView>
   );

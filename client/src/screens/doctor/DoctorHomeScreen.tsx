@@ -20,6 +20,7 @@ import { AuthContext } from '../../context/AuthContext';
 import api from '../../services/api';
 import { initSocket } from '../../services/socket';
 import ReportModal from '../../components/common/ReportModal';
+import TranslatedText from '../../components/common/TranslatedText';
 
 export default function DoctorHomeScreen() {
   const [doctorProfile, setDoctorProfile] = useState<any>(null);
@@ -182,7 +183,7 @@ export default function DoctorHomeScreen() {
           </View>
         </View>
 
-        <Text style={[styles.description, { color: theme.text }]}>{item.description}</Text>
+        <TranslatedText text={item.description} style={[styles.description, { color: theme.text }]} />
 
         {photoFullUrl && (
           <TouchableOpacity
