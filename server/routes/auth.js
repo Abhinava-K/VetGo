@@ -6,6 +6,8 @@ const {
   signupUser, 
   signupDoctor, 
   login, 
+  sendOtp,
+  loginWithOtp,
   refreshToken, 
   logout,
   getMe,
@@ -17,7 +19,9 @@ const {
   validate, 
   signupUserSchema, 
   signupDoctorSchema, 
-  loginSchema 
+  loginSchema,
+  sendOtpSchema,
+  loginOtpSchema
 } = require('../middleware/validators');
 const { protect } = require('../middleware/auth');
 
@@ -65,6 +69,8 @@ const upload = multer({
 router.post('/signup/user', validate(signupUserSchema), signupUser);
 router.post('/signup/doctor', upload.array('docs', 3), validate(signupDoctorSchema), signupDoctor);
 router.post('/login', validate(loginSchema), login);
+router.post('/send-otp', validate(sendOtpSchema), sendOtp);
+router.post('/login-otp', validate(loginOtpSchema), loginWithOtp);
 router.post('/forgot-password', resetPasswordWithPhone);
 router.post('/refresh', refreshToken);
 router.post('/logout', logout);

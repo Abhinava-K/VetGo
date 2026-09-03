@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { 
-  StyleSheet, 
-  View, 
-  Text, 
-  TouchableOpacity, 
-  Switch, 
-  ScrollView, 
-  ActivityIndicator, 
+import {
+  StyleSheet,
+  View,
+  Text,
+  TouchableOpacity,
+  Switch,
+  ScrollView,
+  ActivityIndicator,
   Alert
 } from 'react-native';
 import { Ionicons, Feather } from '@expo/vector-icons';
@@ -82,9 +82,9 @@ export default function ProfileScreen() {
       t('delete_account_msg'),
       [
         { text: t('cancel'), style: 'cancel' },
-        { 
-          text: t('delete_account'), 
-          style: 'destructive', 
+        {
+          text: t('delete_account'),
+          style: 'destructive',
           onPress: async () => {
             try {
               await api.delete('/auth/delete-account');
@@ -94,7 +94,7 @@ export default function ProfileScreen() {
               const msg = error.response?.data?.message || 'Failed to delete account. Please try again.';
               Alert.alert('Error', msg);
             }
-          } 
+          }
         }
       ]
     );
@@ -130,28 +130,28 @@ export default function ProfileScreen() {
   const roleDetails = getRoleLabel(profile?.role || 'USER');
 
   return (
-    <ScrollView 
+    <ScrollView
       style={[styles.container, { backgroundColor: theme.background }]}
-      contentContainerStyle={{ 
-        paddingTop: Math.max(insets.top + 10, 25), 
-        paddingBottom: Math.max(insets.bottom + 110, 110) 
+      contentContainerStyle={{
+        paddingTop: Math.max(insets.top + 10, 25),
+        paddingBottom: Math.max(insets.bottom + 110, 110)
       }}
       showsVerticalScrollIndicator={false}
     >
       {/* Profile Header */}
       <View style={[styles.headerCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
         <View style={[styles.avatarWrapper, { borderColor: theme.primary }]}>
-          <Ionicons 
-            name={profile?.role === 'DOCTOR' ? 'medical-outline' : 'person-outline'} 
-            size={48} 
-            color={theme.primary} 
+          <Ionicons
+            name={profile?.role === 'DOCTOR' ? 'medical-outline' : 'person-outline'}
+            size={48}
+            color={theme.primary}
           />
         </View>
         <Text style={[styles.userName, { color: theme.text }]}>
           {profile?.name ? `${profile.name.first} ${profile.name.last}` : 'User Profile'}
         </Text>
         <Text style={[styles.userEmail, { color: theme.textSecondary }]}>
-          {profile?.email || 'user@vetgo.app'}
+          {profile?.email || ''}
         </Text>
 
         <View style={[styles.roleBadge, { backgroundColor: roleDetails.bg }]}>
@@ -198,7 +198,7 @@ export default function ProfileScreen() {
 
       {/* Account Info Section */}
       <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>{t('account_detail')}</Text>
-      
+
       <View style={[styles.infoList, { backgroundColor: theme.surface, borderColor: theme.border }]}>
         <View style={[styles.infoItem, { borderBottomColor: theme.border }]}>
           <Feather name="phone" size={18} color={theme.textSecondary} style={styles.infoIcon} />
@@ -237,7 +237,7 @@ export default function ProfileScreen() {
       <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>{t('preferences')}</Text>
 
       <View style={[styles.infoList, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.preferenceRow, { borderBottomWidth: 0.8, borderBottomColor: theme.border, paddingBottom: 12, marginBottom: 8 }]}
           onPress={() => setLangModalVisible(true)}
         >
@@ -258,9 +258,9 @@ export default function ProfileScreen() {
             <Feather name="moon" size={18} color={theme.textSecondary} style={styles.infoIcon} />
             <Text style={[styles.prefText, { color: theme.text }]}>{t('dark_mode')}</Text>
           </View>
-          <Switch 
-            value={isDark} 
-            onValueChange={toggleTheme} 
+          <Switch
+            value={isDark}
+            onValueChange={toggleTheme}
             trackColor={{ false: '#767577', true: theme.primary }}
             thumbColor="#f4f3f4"
           />
@@ -268,13 +268,13 @@ export default function ProfileScreen() {
       </View>
 
       {/* Language Selection Modal */}
-      <LanguageSelectModal 
+      <LanguageSelectModal
         visible={langModalVisible}
         onClose={() => setLangModalVisible(false)}
       />
 
       {/* Action Row */}
-      <TouchableOpacity 
+      <TouchableOpacity
         style={[styles.logoutBtn, { backgroundColor: theme.surface, borderColor: theme.error }]}
         onPress={handleLogoutPress}
       >
@@ -282,7 +282,7 @@ export default function ProfileScreen() {
         <Text style={[styles.logoutText, { color: theme.error }]}>{t('logout')}</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity 
+      <TouchableOpacity
         style={[styles.deleteBtn, { backgroundColor: '#EF4444', borderColor: '#EF4444' }]}
         onPress={handleDeleteAccountPress}
       >

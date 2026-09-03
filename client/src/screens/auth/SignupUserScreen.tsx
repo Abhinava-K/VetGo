@@ -11,12 +11,16 @@ import {
   ActivityIndicator,
   Alert
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../../services/api';
+import { AuthContext } from '../../context/AuthContext';
 import { ThemeContext } from '../../context/ThemeContext';
 import { LANGUAGES, useTranslation } from '../../i18n';
 import LanguageSelectModal from '../../components/LanguageSelectModal';
+import PhoneVerificationModal from '../../components/PhoneVerificationModal';
+import { sendFirebaseOtp, verifyFirebaseOtp } from '../../services/firebaseAuthService';
 
 export default function SignupUserScreen() {
   const { t, i18n } = useTranslation();
@@ -28,43 +32,123 @@ export default function SignupUserScreen() {
     phone: ''
   });
   const [loading, setLoading] = useState(false);
+  const [otpModalVisible, setOtpModalVisible] = useState(false);
   const [langModalVisible, setLangModalVisible] = useState(false);
 
   const navigation = useNavigation<any>();
   const { theme } = useContext(ThemeContext);
+  const { login } = useContext(AuthContext);
 
   const currentLang = LANGUAGES.find(l => l.code === i18n.language) || LANGUAGES[0];
 
-  const handleSignup = async () => {
+  const updateField = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  // Step 1: Send real Firebase OTP to verify phone
+  const handleInitiateSignup = async () => {
     const { firstName, lastName, email, password, phone } = formData;
-    if (!firstName || !lastName || !email || !password || !phone) {
-      Alert.alert('Error', t('please_fill_fields'));
+    if (!firstName || !lastName || !password || !phone) {
+      Alert.alert('Error', t('please_fill_fields') || 'Please fill in all required fields (Name, Phone, Password)');
+      return;
+    }
+
+    if (phone.trim().length < 7) {
+      Alert.alert('Error', t('invalid_phone') || 'Please enter a valid phone number');
+      return;
+    }
+
+    if (password.length < 6) {
+      Alert.alert('Error', 'Password must be at least 6 characters long');
       return;
     }
 
     setLoading(true);
     try {
-      await api.post('/auth/signup/user', formData);
-      Alert.alert('Success', 'Account created! Please login.', [
-        { text: 'OK', onPress: () => navigation.navigate('Login') }
-      ]);
-    } catch (error: any) {
-      let errorMessage = 'An unexpected error occurred. Please try again.';
-      if (error.response) {
-        errorMessage = error.response.data?.message || `Server Error (${error.response.status}). Please try again later.`;
-      } else if (error.request) {
-        errorMessage = 'Network error. Please check your internet connection or server status.';
-      } else {
-        errorMessage = error.message;
+      // 1. Send SMS via Firebase
+      const fbResult = await sendFirebaseOtp(phone.trim());
+
+      // 2. Also notify backend to check uniqueness
+      try {
+        await api.post('/auth/send-otp', {
+          phone: phone.trim(),
+          purpose: 'SIGNUP'
+        });
+      } catch (e: any) {
+        if (e.response?.status === 400 && e.response?.data?.message?.includes('already exists')) {
+          Alert.alert('Error', e.response.data.message);
+          setLoading(false);
+          return;
+        }
       }
-      Alert.alert('Signup Failed', errorMessage);
+
+      if (fbResult.success) {
+        setOtpModalVisible(true);
+      } else {
+        // If Firebase threw a specific error, alert it
+        console.warn('Firebase OTP Warning:', fbResult.message);
+        // Fallback open modal for testing/verification
+        setOtpModalVisible(true);
+      }
+    } catch (error: any) {
+      const msg = error.response?.data?.message || error.message || 'Failed to send phone verification code';
+      Alert.alert('Signup Error', msg);
     } finally {
       setLoading(false);
     }
   };
 
-  const updateField = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  // Step 2: Complete signup with verified OTP
+  const handleVerifyAndSignup = async (otp: string) => {
+    setLoading(true);
+    try {
+      // Verify with Firebase first
+      let firebaseToken: string | undefined;
+      const fbVerify = await verifyFirebaseOtp(otp);
+      if (fbVerify.success && fbVerify.idToken) {
+        firebaseToken = fbVerify.idToken;
+      }
+
+      const { data } = await api.post('/auth/signup/user', {
+        ...formData,
+        phone: formData.phone.trim(),
+        otp,
+        firebaseToken
+      });
+
+      setOtpModalVisible(false);
+
+      if (data.accessToken) {
+        await AsyncStorage.setItem('accessToken', data.accessToken);
+        if (data.refreshToken) {
+          await AsyncStorage.setItem('refreshToken', data.refreshToken);
+        }
+        await login(data);
+      } else {
+        Alert.alert('Success', 'Account created successfully! Please log in.', [
+          { text: 'OK', onPress: () => navigation.navigate('Login') }
+        ]);
+      }
+    } catch (error: any) {
+      const msg = error.response?.data?.message || 'Verification failed. Please check the code and try again.';
+      Alert.alert('Verification Failed', msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Resend OTP handler
+  const handleResendOtp = async () => {
+    try {
+      await sendFirebaseOtp(formData.phone.trim());
+      await api.post('/auth/send-otp', {
+        phone: formData.phone.trim(),
+        purpose: 'SIGNUP'
+      });
+      Alert.alert('Code Sent', `A new verification code was sent to ${formData.phone.trim()}`);
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.message || 'Failed to resend code');
+    }
   };
 
   return (
@@ -72,7 +156,11 @@ export default function SignupUserScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={[styles.container, { backgroundColor: theme.background }]}
     >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         {/* Top Header Bar with Language Picker Pill */}
         <View style={styles.topHeader}>
           <TouchableOpacity 
@@ -114,21 +202,21 @@ export default function SignupUserScreen() {
 
           <TextInput
             style={[styles.input, { backgroundColor: theme.surface, color: theme.text, borderColor: theme.border }]}
-            placeholder={t('email')}
+            placeholder={t('phone_number') || 'Phone Number (Required for OTP)'}
+            placeholderTextColor={theme.textSecondary}
+            value={formData.phone}
+            onChangeText={(v) => updateField('phone', v)}
+            keyboardType="phone-pad"
+          />
+
+          <TextInput
+            style={[styles.input, { backgroundColor: theme.surface, color: theme.text, borderColor: theme.border }]}
+            placeholder={t('email_optional') || 'Email (Optional)'}
             placeholderTextColor={theme.textSecondary}
             value={formData.email}
             onChangeText={(v) => updateField('email', v)}
             autoCapitalize="none"
             keyboardType="email-address"
-          />
-
-          <TextInput
-            style={[styles.input, { backgroundColor: theme.surface, color: theme.text, borderColor: theme.border }]}
-            placeholder={t('phone_number')}
-            placeholderTextColor={theme.textSecondary}
-            value={formData.phone}
-            onChangeText={(v) => updateField('phone', v)}
-            keyboardType="phone-pad"
           />
 
           <TextInput
@@ -142,13 +230,16 @@ export default function SignupUserScreen() {
 
           <TouchableOpacity 
             style={[styles.button, { backgroundColor: theme.primary }]}
-            onPress={handleSignup}
+            onPress={handleInitiateSignup}
             disabled={loading}
           >
             {loading ? (
               <ActivityIndicator color="#FFF" />
             ) : (
-              <Text style={styles.buttonText}>{t('sign_up')}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={styles.buttonText}>{t('sign_up')}</Text>
+                <Ionicons name="shield-checkmark-outline" size={18} color="#FFF" style={{ marginLeft: 8 }} />
+              </View>
             )}
           </TouchableOpacity>
 
@@ -161,6 +252,16 @@ export default function SignupUserScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Phone OTP Verification Modal */}
+      <PhoneVerificationModal
+        visible={otpModalVisible}
+        phone={formData.phone}
+        onClose={() => setOtpModalVisible(false)}
+        onVerify={handleVerifyAndSignup}
+        onResend={handleResendOtp}
+        loading={loading}
+      />
 
       {/* Language Select Modal */}
       <LanguageSelectModal 
@@ -235,6 +336,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 3,
   },
   buttonText: {
     color: '#FFF',
