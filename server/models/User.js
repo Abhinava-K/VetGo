@@ -32,7 +32,8 @@ const userSchema = new mongoose.Schema({
   },
   email: {
     type: String,
-    required: true,
+    required: false,
+    sparse: true,
     unique: true,
     lowercase: true,
     trim: true
@@ -68,7 +69,7 @@ const userSchema = new mongoose.Schema({
 });
 
 // Indexes
-userSchema.index({ email: 1 }, { unique: true });
+userSchema.index({ email: 1 }, { unique: true, sparse: true });
 userSchema.index({ role: 1, email: 1 });
 userSchema.index({ role: 1, "name.first": 1, "name.last": 1 });
 userSchema.index({ location: '2dsphere' });

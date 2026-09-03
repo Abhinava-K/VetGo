@@ -18,6 +18,8 @@ import api from '../../services/api';
 import { ThemeContext } from '../../context/ThemeContext';
 import { LANGUAGES, useTranslation } from '../../i18n';
 import LanguageSelectModal from '../../components/LanguageSelectModal';
+import PhoneVerificationModal from '../../components/PhoneVerificationModal';
+import { sendFirebaseOtp, verifyFirebaseOtp } from '../../services/firebaseAuthService';
 
 export default function SignupDoctorScreen() {
   const { t, i18n } = useTranslation();
@@ -31,6 +33,7 @@ export default function SignupDoctorScreen() {
   });
   const [selectedDocs, setSelectedDocs] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [otpModalVisible, setOtpModalVisible] = useState(false);
   const [langModalVisible, setLangModalVisible] = useState(false);
 
   const navigation = useNavigation<any>();
@@ -59,10 +62,18 @@ export default function SignupDoctorScreen() {
     setSelectedDocs(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleSignup = async () => {
+  const handleInitiateSignup = async () => {
     const { firstName, lastName, email, password, phone, qualifications } = formData;
-    if (!firstName || !lastName || !email || !password || !phone || !qualifications) {
-      Alert.alert('Error', t('please_fill_fields'));
+    if (!firstName || !lastName || !password || !phone || !qualifications) {
+      Alert.alert('Error', t('please_fill_fields') || 'Please fill in all required fields (Name, Phone, Qualifications, Password)');
+      return;
+    }
+    if (phone.trim().length < 7) {
+      Alert.alert('Error', t('invalid_phone') || 'Please enter a valid phone number');
+      return;
+    }
+    if (password.length < 6) {
+      Alert.alert('Error', 'Password must be at least 6 characters long');
       return;
     }
     if (selectedDocs.length === 0) {
@@ -72,13 +83,57 @@ export default function SignupDoctorScreen() {
 
     setLoading(true);
     try {
+      // Send real SMS via Firebase
+      const fbResult = await sendFirebaseOtp(phone.trim());
+
+      try {
+        await api.post('/auth/send-otp', {
+          phone: phone.trim(),
+          purpose: 'SIGNUP'
+        });
+      } catch (e: any) {
+        if (e.response?.status === 400 && e.response?.data?.message?.includes('already exists')) {
+          Alert.alert('Error', e.response.data.message);
+          setLoading(false);
+          return;
+        }
+      }
+
+      if (fbResult.success) {
+        setOtpModalVisible(true);
+      } else {
+        console.warn('Firebase OTP Warning:', fbResult.message);
+        setOtpModalVisible(true);
+      }
+    } catch (error: any) {
+      const msg = error.response?.data?.message || error.message || 'Failed to send phone verification code';
+      Alert.alert('Application Error', msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyAndSignup = async (otp: string) => {
+    const { firstName, lastName, email, password, phone, qualifications } = formData;
+    setLoading(true);
+    try {
+      let firebaseToken = '';
+      const fbVerify = await verifyFirebaseOtp(otp);
+      if (fbVerify.success && fbVerify.idToken) {
+        firebaseToken = fbVerify.idToken;
+      }
+
       const data = new FormData();
       data.append('firstName', firstName);
       data.append('lastName', lastName);
       data.append('email', email);
       data.append('password', password);
-      data.append('phone', phone);
+      data.append('phone', phone.trim());
       data.append('qualifications', qualifications);
+      data.append('otp', otp);
+      if (firebaseToken) {
+        data.append('firebaseToken', firebaseToken);
+      }
 
       selectedDocs.forEach((doc, idx) => {
         let name = doc.name || `document_${idx + 1}`;
@@ -103,24 +158,32 @@ export default function SignupDoctorScreen() {
           'Content-Type': 'multipart/form-data',
         },
       });
-      
+
+      setOtpModalVisible(false);
+
       Alert.alert(
         'Application Submitted', 
         'Your application is pending review. We will contact you soon.',
         [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
       );
     } catch (error: any) {
-      let errorMessage = 'An unexpected error occurred. Please try again.';
-      if (error.response) {
-        errorMessage = error.response.data?.message || `Server Error (${error.response.status}). Please try again later.`;
-      } else if (error.request) {
-        errorMessage = 'Network error. Please check your internet connection or server status.';
-      } else {
-        errorMessage = error.message;
-      }
-      Alert.alert('Signup Failed', errorMessage);
+      const msg = error.response?.data?.message || 'Application failed. Please try again.';
+      Alert.alert('Application Failed', msg);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    try {
+      await sendFirebaseOtp(formData.phone.trim());
+      await api.post('/auth/send-otp', {
+        phone: formData.phone.trim(),
+        purpose: 'SIGNUP'
+      });
+      Alert.alert('Code Sent', `A new verification code was sent to ${formData.phone.trim()}`);
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.message || 'Failed to resend code');
     }
   };
 
@@ -133,7 +196,11 @@ export default function SignupDoctorScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={[styles.container, { backgroundColor: theme.background }]}
     >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         {/* Top Header Bar with Language Picker Pill */}
         <View style={styles.topHeader}>
           <TouchableOpacity 
@@ -175,16 +242,16 @@ export default function SignupDoctorScreen() {
 
           <TextInput
             style={[styles.input, { backgroundColor: theme.surface, color: theme.text, borderColor: theme.border }]}
-            placeholder={t('qualifications_placeholder')}
+            placeholder={t('phone_number') || 'Phone Number (Required for OTP)'}
             placeholderTextColor={theme.textSecondary}
-            value={formData.qualifications}
-            onChangeText={(v) => updateField('qualifications', v)}
-            maxLength={140}
+            value={formData.phone}
+            onChangeText={(v) => updateField('phone', v)}
+            keyboardType="phone-pad"
           />
 
           <TextInput
             style={[styles.input, { backgroundColor: theme.surface, color: theme.text, borderColor: theme.border }]}
-            placeholder={t('email')}
+            placeholder={t('email_optional') || 'Email (Optional)'}
             placeholderTextColor={theme.textSecondary}
             value={formData.email}
             onChangeText={(v) => updateField('email', v)}
@@ -194,11 +261,10 @@ export default function SignupDoctorScreen() {
 
           <TextInput
             style={[styles.input, { backgroundColor: theme.surface, color: theme.text, borderColor: theme.border }]}
-            placeholder={t('phone_number')}
+            placeholder={t('qualifications_placeholder')}
             placeholderTextColor={theme.textSecondary}
-            value={formData.phone}
-            onChangeText={(v) => updateField('phone', v)}
-            keyboardType="phone-pad"
+            value={formData.qualifications}
+            onChangeText={(v) => updateField('qualifications', v)}
           />
 
           <TextInput
@@ -210,42 +276,47 @@ export default function SignupDoctorScreen() {
             secureTextEntry
           />
 
-          <View style={styles.uploadBox}>
-            <Text style={{ color: theme.textSecondary, marginBottom: 10, fontWeight: 'bold' }}>
+          <View style={styles.docSection}>
+            <Text style={[styles.docLabel, { color: theme.textSecondary }]}>
               {t('upload_docs_label')}
             </Text>
+            
             <TouchableOpacity 
-              style={[styles.uploadButton, { borderColor: theme.secondary, backgroundColor: `${theme.secondary}12` }]}
+              style={[styles.uploadButton, { borderColor: theme.secondary, backgroundColor: theme.surface }]}
               onPress={pickDocuments}
+              disabled={selectedDocs.length >= 3}
             >
-              <Text style={{ color: theme.secondary, fontWeight: 'bold' }}>{t('select_documents')}</Text>
+              <Ionicons name="cloud-upload-outline" size={24} color={theme.secondary} />
+              <Text style={[styles.uploadButtonText, { color: theme.secondary }]}>
+                {t('select_documents')} ({selectedDocs.length}/3)
+              </Text>
             </TouchableOpacity>
 
-            {selectedDocs.length > 0 && (
-              <View style={styles.selectedFilesList}>
-                {selectedDocs.map((doc, idx) => (
-                  <View key={idx} style={[styles.selectedFileItem, { borderColor: theme.border }]}>
-                    <Text style={{ color: theme.text, flex: 0.9 }} numberOfLines={1}>
-                      {doc.name || `Document ${idx + 1}`}
-                    </Text>
-                    <TouchableOpacity onPress={() => removeDoc(idx)}>
-                      <Text style={{ color: theme.error, fontWeight: 'bold' }}>Remove</Text>
-                    </TouchableOpacity>
-                  </View>
-                ))}
+            {selectedDocs.map((doc, index) => (
+              <View key={index} style={[styles.docItem, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                <Ionicons name="document-text-outline" size={20} color={theme.primary} />
+                <Text style={[styles.docName, { color: theme.text }]} numberOfLines={1}>
+                  {doc.name}
+                </Text>
+                <TouchableOpacity onPress={() => removeDoc(index)}>
+                  <Ionicons name="close-circle" size={20} color="#ff4444" />
+                </TouchableOpacity>
               </View>
-            )}
+            ))}
           </View>
 
           <TouchableOpacity 
             style={[styles.button, { backgroundColor: theme.secondary }]}
-            onPress={handleSignup}
+            onPress={handleInitiateSignup}
             disabled={loading}
           >
             {loading ? (
               <ActivityIndicator color="#FFF" />
             ) : (
-              <Text style={styles.buttonText}>{t('submit_application')}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={styles.buttonText}>{t('submit_application')}</Text>
+                <Ionicons name="shield-checkmark-outline" size={18} color="#FFF" style={{ marginLeft: 8 }} />
+              </View>
             )}
           </TouchableOpacity>
 
@@ -258,6 +329,16 @@ export default function SignupDoctorScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Phone OTP Verification Modal */}
+      <PhoneVerificationModal
+        visible={otpModalVisible}
+        phone={formData.phone}
+        onClose={() => setOtpModalVisible(false)}
+        onVerify={handleVerifyAndSignup}
+        onResend={handleResendOtp}
+        loading={loading}
+      />
 
       {/* Language Select Modal */}
       <LanguageSelectModal 
@@ -301,7 +382,7 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   title: {
-    fontSize: 28,
+    fontSize: 30,
     fontWeight: 'bold',
   },
   subtitle: {
@@ -326,19 +407,42 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     fontSize: 16,
   },
-  uploadBox: {
+  docSection: {
+    marginBottom: 20,
+  },
+  docLabel: {
+    fontSize: 14,
+    marginBottom: 10,
+    fontWeight: '500',
+  },
+  uploadButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 50,
     borderWidth: 1,
     borderStyle: 'dashed',
     borderRadius: 12,
-    borderColor: '#CCC',
-    padding: 20,
-    alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 10,
   },
-  uploadButton: {
-    borderWidth: 1,
+  uploadButtonText: {
+    marginLeft: 10,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  docItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
     padding: 10,
+    borderWidth: 1,
     borderRadius: 8,
+    marginBottom: 5,
+  },
+  docName: {
+    flex: 1,
+    marginLeft: 10,
+    marginRight: 10,
+    fontSize: 14,
   },
   button: {
     height: 55,
@@ -357,18 +461,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 25,
     marginBottom: 40,
-  },
-  selectedFilesList: {
-    width: '100%',
-    marginTop: 15,
-  },
-  selectedFileItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 12,
-    borderWidth: 1,
-    borderRadius: 8,
-    marginBottom: 8,
   },
 });
