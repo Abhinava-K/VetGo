@@ -24,8 +24,9 @@ const {
   loginOtpSchema
 } = require('../middleware/validators');
 const { protect } = require('../middleware/auth');
+const { verifyUploadedFiles } = require('../middleware/security');
 
-// Multer setup for doctor docs
+// Multer setup for doctor docs (Strictly PDF, JPG, PNG only)
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, 'uploads/doctorDocs/');
@@ -33,41 +34,46 @@ const storage = multer.diskStorage({
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     let ext = path.extname(file.originalname).toLowerCase();
-    if (!ext) {
+    if (!ext || !['.pdf', '.jpg', '.jpeg', '.png'].includes(ext)) {
       if (file.mimetype === 'image/jpeg' || file.mimetype === 'image/jpg') ext = '.jpg';
       else if (file.mimetype === 'image/png') ext = '.png';
-      else if (file.mimetype === 'image/webp') ext = '.webp';
-      else if (file.mimetype === 'image/heic') ext = '.heic';
-      else if (file.mimetype === 'image/gif') ext = '.gif';
       else if (file.mimetype === 'application/pdf') ext = '.pdf';
-      else if (file.mimetype === 'application/msword') ext = '.doc';
-      else if (file.mimetype.includes('wordprocessingml')) ext = '.docx';
-      else ext = '.jpg';
+      else ext = '.pdf';
     }
-    cb(null, file.fieldname + '-' + uniqueSuffix + ext);
+    // Safe alphanumeric filename without user-controlled path characters
+    cb(null, 'doc-' + uniqueSuffix + ext);
   }
 });
 
 const upload = multer({ 
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  limits: { 
+    fileSize: 5 * 1024 * 1024, // 5MB per file max
+    files: 3 // Max 3 documents
+  },
   fileFilter: (req, file, cb) => {
-    const allowedExts = /jpeg|jpg|png|gif|webp|heic|heif|pdf|doc|docx/;
-    const allowedMimeTypes = /image\/(jpeg|png|gif|webp|heic|heif|jpg)|application\/pdf|application\/msword|application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.document|application\/octet-stream/;
+    const allowedExts = /^(pdf|jpg|jpeg|png)$/i;
+    const allowedMimeTypes = /^(application\/pdf|image\/jpeg|image\/jpg|image\/png)$/i;
 
     const extname = path.extname(file.originalname).toLowerCase().replace('.', '');
     const extValid = allowedExts.test(extname);
     const mimeValid = allowedMimeTypes.test(file.mimetype);
 
-    if (extValid || mimeValid || !file.originalname) {
+    if (extValid && mimeValid) {
       return cb(null, true);
     }
-    cb(new Error('Only images, PDFs and Word docs are allowed'));
+    cb(new Error('Security restriction: Only PDF, JPG, and PNG documents are permitted.'));
   }
 });
 
 router.post('/signup/user', validate(signupUserSchema), signupUser);
-router.post('/signup/doctor', upload.array('docs', 3), validate(signupDoctorSchema), signupDoctor);
+router.post(
+  '/signup/doctor', 
+  upload.array('docs', 3), 
+  verifyUploadedFiles(['pdf', 'jpg', 'png']), 
+  validate(signupDoctorSchema), 
+  signupDoctor
+);
 router.post('/login', validate(loginSchema), login);
 router.post('/send-otp', validate(sendOtpSchema), sendOtp);
 router.post('/login-otp', validate(loginOtpSchema), loginWithOtp);

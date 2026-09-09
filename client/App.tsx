@@ -14,13 +14,30 @@ import { ThemeProvider, ThemeContext } from './src/context/ThemeContext';
 
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { View } from 'react-native';
+
 function AppContent() {
-  const { isDark } = React.useContext(ThemeContext);
+  const { theme, isDark } = React.useContext(ThemeContext);
+
+  const navTheme = {
+    dark: isDark,
+    colors: {
+      primary: theme.primary,
+      background: theme.background,
+      card: theme.surface,
+      text: theme.text,
+      border: theme.border,
+      notification: theme.primary,
+    },
+  };
+
   return (
-    <NavigationContainer>
-      <RootNavigator />
-      <StatusBar style={isDark ? 'light' : 'dark'} />
-    </NavigationContainer>
+    <View style={{ flex: 1, backgroundColor: theme.background }}>
+      <NavigationContainer theme={navTheme}>
+        <RootNavigator />
+        <StatusBar style={isDark ? 'light' : 'dark'} />
+      </NavigationContainer>
+    </View>
   );
 }
 

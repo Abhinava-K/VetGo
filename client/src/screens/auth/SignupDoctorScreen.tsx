@@ -44,12 +44,25 @@ export default function SignupDoctorScreen() {
   const pickDocuments = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
-        type: ['application/pdf', 'image/*'],
+        type: ['application/pdf', 'image/jpeg', 'image/png'],
         multiple: true,
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        const newDocs = [...selectedDocs, ...result.assets].slice(0, 3);
+        const validAssets = result.assets.filter(asset => {
+          const name = (asset.name || '').toLowerCase();
+          const mime = (asset.mimeType || '').toLowerCase();
+          const isPdf = name.endsWith('.pdf') || mime === 'application/pdf';
+          const isJpg = name.endsWith('.jpg') || name.endsWith('.jpeg') || mime.includes('jpeg') || mime.includes('jpg');
+          const isPng = name.endsWith('.png') || mime.includes('png');
+          return isPdf || isJpg || isPng;
+        });
+
+        if (validAssets.length < result.assets.length) {
+          Alert.alert('Notice', 'Only PDF, JPG, and PNG files are accepted. Other files were skipped.');
+        }
+
+        const newDocs = [...selectedDocs, ...validAssets].slice(0, 3);
         setSelectedDocs(newDocs);
       }
     } catch (err) {
@@ -193,7 +206,7 @@ export default function SignupDoctorScreen() {
 
   return (
     <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={[styles.container, { backgroundColor: theme.background }]}
     >
       <ScrollView 

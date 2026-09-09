@@ -8,6 +8,8 @@ const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
 const connectDB = require('./config/db');
 
+const { sanitizeInputs } = require('./middleware/security');
+
 const app = express();
 const server = http.createServer(app);
 
@@ -22,6 +24,7 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(sanitizeInputs); // Strips NoSQL/SQL injection operators ($where, $gt, etc.) and null-bytes
 app.use(cookieParser());
 app.use('/uploads', express.static('uploads'));
 
