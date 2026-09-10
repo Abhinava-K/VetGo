@@ -46,6 +46,15 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  agreedToTerms: {
+    type: Boolean,
+    default: true,
+    required: true
+  },
+  agreedAt: {
+    type: Date,
+    default: Date.now
+  },
   avatar: {
     type: String,
     default: '' // Path or base64 placeholder

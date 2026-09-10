@@ -6,7 +6,8 @@ const signupUserSchema = Joi.object({
   email: Joi.string().email().optional().allow('', null),
   password: Joi.string().min(6).required(),
   phone: Joi.string().required(),
-  otp: Joi.string().optional().allow('', null)
+  otp: Joi.string().optional().allow('', null),
+  agreedToTerms: Joi.boolean().optional()
 });
 
 const signupDoctorSchema = Joi.object({
@@ -16,7 +17,8 @@ const signupDoctorSchema = Joi.object({
   password: Joi.string().min(6).required(),
   phone: Joi.string().required(),
   qualifications: Joi.string().max(140).required(),
-  otp: Joi.string().optional().allow('', null)
+  otp: Joi.string().optional().allow('', null),
+  agreedToTerms: Joi.boolean().optional()
 });
 
 const loginSchema = Joi.object({

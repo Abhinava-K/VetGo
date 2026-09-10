@@ -19,6 +19,7 @@ import { AuthContext } from '../../context/AuthContext';
 import { ThemeContext } from '../../context/ThemeContext';
 import { LANGUAGES, useTranslation } from '../../i18n';
 import LanguageSelectModal from '../../components/LanguageSelectModal';
+import LegalModal from '../../components/LegalModal';
 import { sendFirebaseOtp, verifyFirebaseOtp } from '../../services/firebaseAuthService';
 
 export default function LoginScreen() {
@@ -38,10 +39,17 @@ export default function LoginScreen() {
 
   const [loading, setLoading] = useState(false);
   const [langModalVisible, setLangModalVisible] = useState(false);
+  const [legalModalVisible, setLegalModalVisible] = useState(false);
+  const [legalInitialTab, setLegalInitialTab] = useState<'TERMS' | 'PRIVACY'>('TERMS');
 
   const navigation = useNavigation<any>();
   const { theme, isDark } = useContext(ThemeContext);
   const { login } = useContext(AuthContext);
+
+  const openLegal = (tab: 'TERMS' | 'PRIVACY') => {
+    setLegalInitialTab(tab);
+    setLegalModalVisible(true);
+  };
 
   const currentLang = LANGUAGES.find(l => l.code === i18n.language) || LANGUAGES[0];
 
@@ -384,12 +392,39 @@ export default function LoginScreen() {
         >
           <Text style={{ color: theme.secondary }}>{t('are_you_a_doctor')}</Text>
         </TouchableOpacity>
+
+        {/* Legal Disclaimer Line */}
+        <View style={styles.legalNoticeContainer}>
+          <Text style={[styles.legalNoticeText, { color: theme.textSecondary }]}>
+            {t('by_logging_in_agree') || 'By continuing, you agree to our'}{' '}
+          </Text>
+          <View style={styles.legalLinksRow}>
+            <TouchableOpacity onPress={() => openLegal('TERMS')}>
+              <Text style={[styles.legalLink, { color: theme.primary }]}>
+                {t('terms_and_conditions') || 'Terms of Service'}
+              </Text>
+            </TouchableOpacity>
+            <Text style={[styles.legalNoticeText, { color: theme.textSecondary }]}> {t('and') || '&'} </Text>
+            <TouchableOpacity onPress={() => openLegal('PRIVACY')}>
+              <Text style={[styles.legalLink, { color: theme.primary }]}>
+                {t('privacy_policy') || 'Privacy Policy'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </ScrollView>
 
       {/* Reusable Language Select Modal */}
       <LanguageSelectModal 
         visible={langModalVisible}
         onClose={() => setLangModalVisible(false)}
+      />
+
+      {/* In-App Legal & Privacy Reader Modal */}
+      <LegalModal
+        visible={legalModalVisible}
+        onClose={() => setLegalModalVisible(false)}
+        initialTab={legalInitialTab}
       />
     </KeyboardAvoidingView>
   );
@@ -534,6 +569,26 @@ const styles = StyleSheet.create({
   },
   doctorSignup: {
     alignItems: 'center',
-    marginTop: 18,
-  }
+    marginTop: 15,
+  },
+  legalNoticeContainer: {
+    marginTop: 28,
+    alignItems: 'center',
+    paddingHorizontal: 10,
+  },
+  legalNoticeText: {
+    fontSize: 12,
+    textAlign: 'center',
+  },
+  legalLinksRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 3,
+  },
+  legalLink: {
+    fontSize: 12,
+    fontWeight: '700',
+    textDecorationLine: 'underline',
+  },
 });

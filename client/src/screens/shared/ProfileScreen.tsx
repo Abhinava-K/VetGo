@@ -16,6 +16,7 @@ import { AuthContext } from '../../context/AuthContext';
 import api from '../../services/api';
 import { LANGUAGES, useTranslation } from '../../i18n';
 import LanguageSelectModal from '../../components/LanguageSelectModal';
+import LegalModal from '../../components/LegalModal';
 
 export default function ProfileScreen() {
   const { t, i18n } = useTranslation();
@@ -29,6 +30,13 @@ export default function ProfileScreen() {
   const [docProfile, setDocProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [langModalVisible, setLangModalVisible] = useState(false);
+  const [legalModalVisible, setLegalModalVisible] = useState(false);
+  const [legalInitialTab, setLegalInitialTab] = useState<'TERMS' | 'PRIVACY'>('TERMS');
+
+  const openLegal = (tab: 'TERMS' | 'PRIVACY') => {
+    setLegalInitialTab(tab);
+    setLegalModalVisible(true);
+  };
 
   useEffect(() => {
     fetchProfileData();
@@ -267,10 +275,58 @@ export default function ProfileScreen() {
         </View>
       </View>
 
+      {/* Legal & Compliance Section */}
+      <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>
+        {t('legal_and_compliance') || 'LEGAL & COMPLIANCE'}
+      </Text>
+
+      <View style={[styles.infoList, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+        <TouchableOpacity
+          style={[styles.preferenceRow, { borderBottomWidth: 0.8, borderBottomColor: theme.border, paddingBottom: 12, marginBottom: 8 }]}
+          onPress={() => openLegal('TERMS')}
+        >
+          <View style={styles.prefLeft}>
+            <Feather name="file-text" size={18} color={theme.textSecondary} style={styles.infoIcon} />
+            <Text style={[styles.prefText, { color: theme.text }]}>
+              {t('terms_and_conditions') || 'Terms & Conditions'}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward-outline" size={20} color={theme.textSecondary} />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.preferenceRow}
+          onPress={() => openLegal('PRIVACY')}
+        >
+          <View style={styles.prefLeft}>
+            <Feather name="shield" size={18} color={theme.textSecondary} style={styles.infoIcon} />
+            <Text style={[styles.prefText, { color: theme.text }]}>
+              {t('privacy_policy') || 'Privacy Policy'}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward-outline" size={20} color={theme.textSecondary} />
+        </TouchableOpacity>
+      </View>
+
+      {/* Compliance Badge */}
+      <View style={styles.complianceBadgeRow}>
+        <Feather name="check-circle" size={13} color={theme.primary} style={{ marginRight: 5 }} />
+        <Text style={[styles.complianceBadgeText, { color: theme.textSecondary }]}>
+          {t('compliance_badge') || 'VetGo v1.0.0 • DPDP Act 2023 Compliant'}
+        </Text>
+      </View>
+
       {/* Language Selection Modal */}
       <LanguageSelectModal
         visible={langModalVisible}
         onClose={() => setLangModalVisible(false)}
+      />
+
+      {/* Legal & Privacy Modal */}
+      <LegalModal
+        visible={legalModalVisible}
+        onClose={() => setLegalModalVisible(false)}
+        initialTab={legalInitialTab}
       />
 
       {/* Action Row */}
@@ -458,6 +514,17 @@ const styles = StyleSheet.create({
   deleteText: {
     fontSize: 16,
     fontWeight: '700',
+  },
+  complianceBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+    marginBottom: 16,
+  },
+  complianceBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
   },
 });
 

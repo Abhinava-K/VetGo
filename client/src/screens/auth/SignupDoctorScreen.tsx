@@ -16,9 +16,9 @@ import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import api from '../../services/api';
 import { ThemeContext } from '../../context/ThemeContext';
-import { LANGUAGES, useTranslation } from '../../i18n';
 import LanguageSelectModal from '../../components/LanguageSelectModal';
 import PhoneVerificationModal from '../../components/PhoneVerificationModal';
+import LegalModal from '../../components/LegalModal';
 import { sendFirebaseOtp, verifyFirebaseOtp } from '../../services/firebaseAuthService';
 
 export default function SignupDoctorScreen() {
@@ -35,9 +35,17 @@ export default function SignupDoctorScreen() {
   const [loading, setLoading] = useState(false);
   const [otpModalVisible, setOtpModalVisible] = useState(false);
   const [langModalVisible, setLangModalVisible] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(true);
+  const [legalModalVisible, setLegalModalVisible] = useState(false);
+  const [legalInitialTab, setLegalInitialTab] = useState<'TERMS' | 'PRIVACY'>('TERMS');
 
   const navigation = useNavigation<any>();
   const { theme } = useContext(ThemeContext);
+
+  const openLegal = (tab: 'TERMS' | 'PRIVACY') => {
+    setLegalInitialTab(tab);
+    setLegalModalVisible(true);
+  };
 
   const currentLang = LANGUAGES.find(l => l.code === i18n.language) || LANGUAGES[0];
 
@@ -91,6 +99,14 @@ export default function SignupDoctorScreen() {
     }
     if (selectedDocs.length === 0) {
       Alert.alert('Error', 'Please upload at least one degree certification or ID proof document.');
+      return;
+    }
+
+    if (!agreedToTerms) {
+      Alert.alert(
+        t('terms_acceptance_required') || 'Terms Acceptance Required',
+        t('please_accept_terms') || 'Please accept the Terms & Conditions and Privacy Policy to proceed.'
+      );
       return;
     }
 
@@ -318,6 +334,37 @@ export default function SignupDoctorScreen() {
             ))}
           </View>
 
+          {/* Terms & Privacy Consent Checkbox */}
+          <View style={styles.termsContainer}>
+            <TouchableOpacity
+              style={[
+                styles.checkbox,
+                { borderColor: theme.border, backgroundColor: agreedToTerms ? theme.secondary : theme.surface }
+              ]}
+              onPress={() => setAgreedToTerms(!agreedToTerms)}
+              activeOpacity={0.8}
+            >
+              {agreedToTerms && <Ionicons name="checkmark" size={14} color="#FFF" />}
+            </TouchableOpacity>
+
+            <View style={styles.termsTextWrap}>
+              <Text style={[styles.termsText, { color: theme.textSecondary }]}>
+                {t('i_agree_to') || 'I agree to the'}{' '}
+              </Text>
+              <TouchableOpacity onPress={() => openLegal('TERMS')}>
+                <Text style={[styles.termsLink, { color: theme.secondary }]}>
+                  {t('terms_and_conditions') || 'Terms & Conditions'}
+                </Text>
+              </TouchableOpacity>
+              <Text style={[styles.termsText, { color: theme.textSecondary }]}> {t('and') || '&'} </Text>
+              <TouchableOpacity onPress={() => openLegal('PRIVACY')}>
+                <Text style={[styles.termsLink, { color: theme.secondary }]}>
+                  {t('privacy_policy') || 'Privacy Policy'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
           <TouchableOpacity 
             style={[styles.button, { backgroundColor: theme.secondary }]}
             onPress={handleInitiateSignup}
@@ -357,6 +404,13 @@ export default function SignupDoctorScreen() {
       <LanguageSelectModal 
         visible={langModalVisible}
         onClose={() => setLangModalVisible(false)}
+      />
+
+      {/* In-App Legal & Privacy Reader Modal */}
+      <LegalModal
+        visible={legalModalVisible}
+        onClose={() => setLegalModalVisible(false)}
+        initialTab={legalInitialTab}
       />
     </KeyboardAvoidingView>
   );
@@ -472,7 +526,36 @@ const styles = StyleSheet.create({
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 25,
-    marginBottom: 40,
+    marginTop: 20,
+  },
+  termsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    marginTop: 2,
+    paddingHorizontal: 2,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 5,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  termsTextWrap: {
+    flex: 1,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+  },
+  termsText: {
+    fontSize: 12,
+  },
+  termsLink: {
+    fontSize: 12,
+    fontWeight: '700',
+    textDecorationLine: 'underline',
   },
 });

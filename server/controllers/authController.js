@@ -227,6 +227,8 @@ exports.signupUser = async (req, res) => {
       name: { first: firstName, last: lastName },
       passwordHash: password, // Pre-save hook hashes this
       phoneEncrypted,
+      agreedToTerms: true,
+      agreedAt: new Date(),
       role: 'USER'
     };
     if (cleanEmail) {
@@ -355,6 +357,8 @@ exports.signupDoctor = async (req, res) => {
       name: { first: firstName, last: lastName },
       passwordHash: password,
       phoneEncrypted,
+      agreedToTerms: true,
+      agreedAt: new Date(),
       role: 'DOCTOR'
     };
     if (cleanEmail) {
