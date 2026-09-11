@@ -69,7 +69,7 @@ export default function LoginScreen() {
   // Password Login Handler
   const handlePasswordLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Error', t('please_fill_fields'));
+      Alert.alert(t('error') || 'Error', t('please_fill_fields'));
       return;
     }
 
@@ -82,7 +82,7 @@ export default function LoginScreen() {
       }
       await login(data);
     } catch (error: any) {
-      Alert.alert('Login Failed', error.response?.data?.message || 'Something went wrong');
+      Alert.alert(t('login_failed') || 'Login Failed', error.response?.data?.message || t('something_went_wrong') || 'Something went wrong');
     } finally {
       setLoading(false);
     }
@@ -92,7 +92,7 @@ export default function LoginScreen() {
   const handleSendOtp = async () => {
     const cleanPhone = phone.trim();
     if (!cleanPhone || cleanPhone.length < 7) {
-      Alert.alert('Invalid Phone', t('invalid_phone') || 'Please enter a valid phone number');
+      Alert.alert(t('error') || 'Invalid Phone', t('invalid_phone') || 'Please enter a valid phone number');
       return;
     }
 
@@ -109,9 +109,9 @@ export default function LoginScreen() {
 
       setOtpSent(true);
       setCountdown(30);
-      Alert.alert('Code Sent', `${t('otp_sent_to') || 'Verification code sent to'} ${cleanPhone}`);
+      Alert.alert(t('code_sent') || 'Code Sent', `${t('otp_sent_to') || 'Verification code sent to'} ${cleanPhone}`);
     } catch (error: any) {
-      Alert.alert('Unable to Send Code', error.response?.data?.message || 'Failed to send OTP code');
+      Alert.alert(t('unable_to_send_code') || 'Unable to Send Code', error.response?.data?.message || 'Failed to send OTP code');
     } finally {
       setSendingOtp(false);
     }
@@ -123,7 +123,7 @@ export default function LoginScreen() {
     const cleanOtp = otp.trim();
 
     if (!cleanOtp || cleanOtp.length < 4) {
-      Alert.alert('Error', t('invalid_otp') || 'Please enter a valid verification code');
+      Alert.alert(t('error') || 'Error', t('invalid_otp') || 'Please enter a valid verification code');
       return;
     }
 
@@ -148,7 +148,7 @@ export default function LoginScreen() {
       }
       await login(data);
     } catch (error: any) {
-      Alert.alert('Verification Failed', error.response?.data?.message || 'Invalid or expired OTP code');
+      Alert.alert(t('verification_failed') || 'Verification Failed', error.response?.data?.message || 'Invalid or expired OTP code');
     } finally {
       setLoading(false);
     }
@@ -330,7 +330,7 @@ export default function LoginScreen() {
                       setOtp('');
                     }}
                   >
-                    <Text style={[styles.editLink, { color: theme.primary }]}>Change</Text>
+                    <Text style={[styles.editLink, { color: theme.primary }]}>{t('change') || 'Change'}</Text>
                   </TouchableOpacity>
                 </View>
 

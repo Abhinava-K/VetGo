@@ -6,9 +6,9 @@ import {
   View,
   TouchableOpacity,
   ScrollView,
-  SafeAreaView,
   Linking
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { ThemeContext } from '../context/ThemeContext';
 import { useTranslation } from '../i18n';

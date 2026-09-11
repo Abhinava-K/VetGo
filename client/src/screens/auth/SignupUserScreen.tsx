@@ -58,7 +58,7 @@ export default function SignupUserScreen() {
   const handleInitiateSignup = async () => {
     const { firstName, lastName, email, password, phone } = formData;
     if (!firstName || !lastName || !password || !phone) {
-      Alert.alert('Error', t('please_fill_fields') || 'Please fill in all required fields (Name, Phone, Password)');
+      Alert.alert(t('error') || 'Error', t('please_fill_fields') || 'Please fill in all required fields (Name, Phone, Password)');
       return;
     }
 
@@ -71,12 +71,12 @@ export default function SignupUserScreen() {
     }
 
     if (phone.trim().length < 7) {
-      Alert.alert('Error', t('invalid_phone') || 'Please enter a valid phone number');
+      Alert.alert(t('error') || 'Error', t('invalid_phone') || 'Please enter a valid phone number');
       return;
     }
 
     if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters long');
+      Alert.alert(t('error') || 'Error', t('password_min_length') || 'Password must be at least 6 characters long');
       return;
     }
 
@@ -93,7 +93,7 @@ export default function SignupUserScreen() {
         });
       } catch (e: any) {
         if (e.response?.status === 400 && e.response?.data?.message?.includes('already exists')) {
-          Alert.alert('Error', e.response.data.message);
+          Alert.alert(t('error') || 'Error', e.response.data.message);
           setLoading(false);
           return;
         }
@@ -108,8 +108,8 @@ export default function SignupUserScreen() {
         setOtpModalVisible(true);
       }
     } catch (error: any) {
-      const msg = error.response?.data?.message || error.message || 'Failed to send phone verification code';
-      Alert.alert('Signup Error', msg);
+      const msg = error.response?.data?.message || error.message || t('unable_to_send_code') || 'Failed to send phone verification code';
+      Alert.alert(t('error') || 'Signup Error', msg);
     } finally {
       setLoading(false);
     }
@@ -142,13 +142,15 @@ export default function SignupUserScreen() {
         }
         await login(data);
       } else {
-        Alert.alert('Success', 'Account created successfully! Please log in.', [
-          { text: 'OK', onPress: () => navigation.navigate('Login') }
-        ]);
+        Alert.alert(
+          t('success') || 'Success', 
+          t('account_created_success') || 'Account created successfully! Please log in.', 
+          [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
+        );
       }
     } catch (error: any) {
-      const msg = error.response?.data?.message || 'Verification failed. Please check the code and try again.';
-      Alert.alert('Verification Failed', msg);
+      const msg = error.response?.data?.message || t('verification_failed') || 'Verification failed. Please check the code and try again.';
+      Alert.alert(t('verification_failed') || 'Verification Failed', msg);
     } finally {
       setLoading(false);
     }
@@ -162,9 +164,9 @@ export default function SignupUserScreen() {
         phone: formData.phone.trim(),
         purpose: 'SIGNUP'
       });
-      Alert.alert('Code Sent', `A new verification code was sent to ${formData.phone.trim()}`);
+      Alert.alert(t('code_sent') || 'Code Sent', `${t('otp_sent_to') || 'A new verification code was sent to'} ${formData.phone.trim()}`);
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.message || 'Failed to resend code');
+      Alert.alert(t('error') || 'Error', error.response?.data?.message || 'Failed to resend code');
     }
   };
 

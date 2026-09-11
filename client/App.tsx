@@ -6,6 +6,7 @@ import { StyleSheet, LogBox } from 'react-native';
 
 LogBox.ignoreLogs([
   'InteractionManager has been deprecated',
+  'SafeAreaView has been deprecated',
 ]);
 import { NavigationContainer } from '@react-navigation/native';
 import RootNavigator from './src/navigation';

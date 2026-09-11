@@ -6,16 +6,17 @@ import {
   TextInput, 
   TouchableOpacity, 
   KeyboardAvoidingView, 
-  Platform,
-  ScrollView,
-  ActivityIndicator,
-  Alert
+  Platform, 
+  ScrollView, 
+  ActivityIndicator, 
+  Alert 
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import api from '../../services/api';
 import { ThemeContext } from '../../context/ThemeContext';
+import { LANGUAGES, useTranslation } from '../../i18n';
 import LanguageSelectModal from '../../components/LanguageSelectModal';
 import PhoneVerificationModal from '../../components/PhoneVerificationModal';
 import LegalModal from '../../components/LegalModal';
@@ -67,7 +68,10 @@ export default function SignupDoctorScreen() {
         });
 
         if (validAssets.length < result.assets.length) {
-          Alert.alert('Notice', 'Only PDF, JPG, and PNG files are accepted. Other files were skipped.');
+          Alert.alert(
+            t('doc_notice_title') || 'Notice', 
+            t('doc_upload_format_notice') || 'Only PDF, JPG, and PNG files are accepted. Other files were skipped.'
+          );
         }
 
         const newDocs = [...selectedDocs, ...validAssets].slice(0, 3);
@@ -75,7 +79,7 @@ export default function SignupDoctorScreen() {
       }
     } catch (err) {
       console.warn('Error picking document:', err);
-      Alert.alert('Error', 'Failed to pick document');
+      Alert.alert(t('error') || 'Error', t('failed_to_pick_doc') || 'Failed to pick document');
     }
   };
 
@@ -86,19 +90,19 @@ export default function SignupDoctorScreen() {
   const handleInitiateSignup = async () => {
     const { firstName, lastName, email, password, phone, qualifications } = formData;
     if (!firstName || !lastName || !password || !phone || !qualifications) {
-      Alert.alert('Error', t('please_fill_fields') || 'Please fill in all required fields (Name, Phone, Qualifications, Password)');
+      Alert.alert(t('error') || 'Error', t('please_fill_fields') || 'Please fill in all required fields (Name, Phone, Qualifications, Password)');
       return;
     }
     if (phone.trim().length < 7) {
-      Alert.alert('Error', t('invalid_phone') || 'Please enter a valid phone number');
+      Alert.alert(t('error') || 'Error', t('invalid_phone') || 'Please enter a valid phone number');
       return;
     }
     if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters long');
+      Alert.alert(t('error') || 'Error', t('password_min_length') || 'Password must be at least 6 characters long');
       return;
     }
     if (selectedDocs.length === 0) {
-      Alert.alert('Error', 'Please upload at least one degree certification or ID proof document.');
+      Alert.alert(t('error') || 'Error', t('upload_one_doc') || 'Please upload at least one degree certification or ID proof document.');
       return;
     }
 
@@ -122,7 +126,7 @@ export default function SignupDoctorScreen() {
         });
       } catch (e: any) {
         if (e.response?.status === 400 && e.response?.data?.message?.includes('already exists')) {
-          Alert.alert('Error', e.response.data.message);
+          Alert.alert(t('error') || 'Error', e.response.data.message);
           setLoading(false);
           return;
         }
@@ -135,8 +139,8 @@ export default function SignupDoctorScreen() {
         setOtpModalVisible(true);
       }
     } catch (error: any) {
-      const msg = error.response?.data?.message || error.message || 'Failed to send phone verification code';
-      Alert.alert('Application Error', msg);
+      const msg = error.response?.data?.message || error.message || t('unable_to_send_code') || 'Failed to send phone verification code';
+      Alert.alert(t('error') || 'Application Error', msg);
     } finally {
       setLoading(false);
     }
@@ -191,13 +195,13 @@ export default function SignupDoctorScreen() {
       setOtpModalVisible(false);
 
       Alert.alert(
-        'Application Submitted', 
-        'Your application is pending review. We will contact you soon.',
+        t('application_submitted') || 'Application Submitted', 
+        t('application_under_review') || 'Your application is pending review. We will contact you soon.',
         [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
       );
     } catch (error: any) {
-      const msg = error.response?.data?.message || 'Application failed. Please try again.';
-      Alert.alert('Application Failed', msg);
+      const msg = error.response?.data?.message || t('application_failed') || 'Application failed. Please try again.';
+      Alert.alert(t('error') || 'Application Failed', msg);
     } finally {
       setLoading(false);
     }
@@ -210,9 +214,9 @@ export default function SignupDoctorScreen() {
         phone: formData.phone.trim(),
         purpose: 'SIGNUP'
       });
-      Alert.alert('Code Sent', `A new verification code was sent to ${formData.phone.trim()}`);
+      Alert.alert(t('code_sent') || 'Code Sent', `${t('otp_sent_to') || 'A new verification code was sent to'} ${formData.phone.trim()}`);
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.message || 'Failed to resend code');
+      Alert.alert(t('error') || 'Error', error.response?.data?.message || 'Failed to resend code');
     }
   };
 

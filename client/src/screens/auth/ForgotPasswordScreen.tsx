@@ -34,17 +34,17 @@ export default function ForgotPasswordScreen() {
 
   const handleResetPassword = async () => {
     if (!email || !phone || !newPassword || !confirmPassword) {
-      Alert.alert('Error', t('please_fill_fields'));
+      Alert.alert(t('error') || 'Error', t('please_fill_fields'));
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      Alert.alert('Error', 'New passwords do not match');
+      Alert.alert(t('error') || 'Error', t('new_passwords_dont_match') || 'New passwords do not match');
       return;
     }
 
     if (newPassword.length < 6) {
-      Alert.alert('Error', 'New password must be at least 6 characters long');
+      Alert.alert(t('error') || 'Error', t('password_min_length') || 'New password must be at least 6 characters long');
       return;
     }
 
@@ -57,18 +57,18 @@ export default function ForgotPasswordScreen() {
       });
 
       Alert.alert(
-        'Success',
-        data.message || 'Password reset successfully! You can now log in.',
+        t('success') || 'Success',
+        data.message || t('password_reset_success') || 'Password reset successfully! You can now log in.',
         [
           {
-            text: 'Go to Login',
+            text: t('go_to_login') || 'Go to Login',
             onPress: () => navigation.navigate('Login'),
           },
         ]
       );
     } catch (error: any) {
       Alert.alert(
-        'Verification Failed',
+        t('verification_failed') || 'Verification Failed',
         error.response?.data?.message || 'Failed to verify phone number or reset password'
       );
     } finally {
@@ -121,7 +121,7 @@ export default function ForgotPasswordScreen() {
                 borderColor: theme.border,
               },
             ]}
-            placeholder="your.email@example.com"
+            placeholder={t('enter_email') || 'your.email@example.com'}
             placeholderTextColor={theme.textSecondary}
             value={email}
             onChangeText={setEmail}

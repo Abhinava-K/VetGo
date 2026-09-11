@@ -72,7 +72,7 @@ export default function WarningStrikeModal({
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           {/* Header Banner */}
           <View style={styles.banner}>
-            <Ionicons name="alert-triangle" size={64} color="#FFF" />
+            <Ionicons name="warning" size={64} color="#FFF" />
             <Text style={styles.bannerTitle}>OFFICIAL WARNING</Text>
             <View style={styles.strikeBadge}>
               <Text style={styles.strikeBadgeText}>
