@@ -169,6 +169,31 @@
   "failed_to_pick_doc": "పత్రం ఎంచుకోవడం విఫలమైంది",
   "doc_notice_title": "సమాచారం",
   "error": "లోపం",
-  "success": "విజయం"
+  "success": "విజయం",
+  "translated_to": "అనువదించబడింది",
+  "more_languages": "ఇతర భాషలు",
+  "hide": "దాచు",
+  "prescription_treatment_plan": "మందులు & చికిత్స ప్రణాళిక",
+  "prescriptions_label": "సూచించిన మందులు",
+  "medication": "మందు",
+  "medicine_name": "మందు పేరు",
+  "dosage": "మోతాదు (Dosage)",
+  "instructions_description": "సూచనలు / వివరణ",
+  "no_prescription_issued": "ఈ సంప్రదింపు కోసం నిర్దిష్ట మందులు సూచించబడలేదు.",
+  "doctor_clinical_notes": "వైద్యుల క్లినికల్ గమనికలు & సంరక్షణ సలహా",
+  "complete_treatment_btn": "చికిత్స పూర్తి చేసి మందుల చీటీ ఇవ్వండి",
+  "add_medicine": "+ మందును జోడించండి",
+  "enter_medicine_name": "మందు పేరు, ఉదా: Meloxicam 250mg syrup",
+  "enter_dosage": "మోతాదు, ఉదా: 5ml నోటి ద్వారా",
+  "enter_instructions": "వివరణ, ఉదా: 5 రోజుల తర్వాత ఇవ్వండి",
+  "clinical_notes_placeholder": "క్లినికల్ నోట్స్, ఉదా: రోగ నిర్ధారణ, చికిత్స మరియు సంరక్షణ సలహా (కనీసం 20 అక్షరాలు)...",
+  "doctor_notes_min_error": "వైద్యుల క్లినికల్ నోట్స్ కనీసం 20 అక్షరాలు ఉండాలి.",
+  "treatment_submitted_waiting": "చికిత్స సమర్పించబడింది — రేటింగ్ కోసం వేచి ఉంది",
+  "treatment_submitted_sub": "మీరు చికిత్సను పూర్తి చేసి ప్రిస్క్రిప్షన్ జారీ చేసారు. పెంపుడు జంతువు యజమాని ధృవీకరించి రేటింగ్ ఇస్తారు.",
+  "doctor_completed_treatment_title": "వైద్యుడు చికిత్స పూర్తి చేసారు!",
+  "doctor_completed_treatment_sub": "పశువైద్యుడు ఆన్-సైట్ చికిత్సను పూర్తి చేసి మీ మందుల చీటీని క్రింద అందించారు. దయచేసి సేవను నిర్ధారించి మీ అనుభవాన్ని రేట్ చేయండి.",
+  "confirm_and_rate_btn": "సేవను నిర్ధారించి కేసును ముగించండి",
+  "treatment_details": "చికిత్స & మందుల వివరాలు"
 }
+
 

@@ -169,6 +169,31 @@
   "failed_to_pick_doc": "दस्तावेज़ चुनने में विफल",
   "doc_notice_title": "सूचना",
   "error": "त्रुटि",
-  "success": "सफलता"
+  "success": "सफलता",
+  "translated_to": "में अनुवादित",
+  "more_languages": "अन्य भाषाएं",
+  "hide": "छिपाएं",
+  "prescription_treatment_plan": "दवा एवं उपचार योजना",
+  "prescriptions_label": "निर्धारित दवाएं",
+  "medication": "दवा",
+  "medicine_name": "दवा का नाम",
+  "dosage": "खुराक (Dosage)",
+  "instructions_description": "निर्देश / विवरण",
+  "no_prescription_issued": "इस यात्रा के लिए कोई विशेष दवाएं निर्धारित नहीं की गई हैं।",
+  "doctor_clinical_notes": "डॉक्टर के नैदानिक ​​नोट्स और देखभाल सलाह",
+  "complete_treatment_btn": "उपचार पूरा करें और पर्ची जारी करें",
+  "add_medicine": "+ दवा जोड़ें",
+  "enter_medicine_name": "दवा का नाम, जैसे: Meloxicam 250mg syrup",
+  "enter_dosage": "खुराक, जैसे: 5ml मौखिक",
+  "enter_instructions": "विवरण, जैसे: 5 दिनों के बाद दें",
+  "clinical_notes_placeholder": "नैदानिक नोट्स, जैसे: निदान, दिया गया उपचार और देखभाल सलाह (न्यूनतम 20 अक्षर)...",
+  "doctor_notes_min_error": "डॉक्टर के नैदानिक नोट्स कम से कम 20 अक्षरों के होने चाहिए।",
+  "treatment_submitted_waiting": "उपचार जमा किया गया — पशु पालक की रेटिंग की प्रतीक्षा है",
+  "treatment_submitted_sub": "आपने उपचार पूरा कर लिया है और पर्ची जारी कर दी है। पशु पालक प्राप्ति की पुष्टि करेंगे और सेवा को रेट करेंगे।",
+  "doctor_completed_treatment_title": "डॉक्टर ने उपचार पूरा किया!",
+  "doctor_completed_treatment_sub": "पशु चिकित्सक ने ऑन-साइट उपचार पूरा कर लिया है और नीचे आपकी पर्ची जारी कर दी है। कृपया सेवा की पुष्टि करें और अपना अनुभव साझा करें।",
+  "confirm_and_rate_btn": "सेवा की पुष्टि करें और मामला बंद करें",
+  "treatment_details": "उपचार एवं दवा का विवरण"
 }
+
 

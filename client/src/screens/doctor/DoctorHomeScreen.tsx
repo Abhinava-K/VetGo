@@ -34,7 +34,7 @@ export default function DoctorHomeScreen() {
 
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
-  const { theme } = useContext(ThemeContext);
+  const { theme, isDark } = useContext(ThemeContext);
   const { logout } = useContext(AuthContext);
 
   const isApproved = doctorProfile?.docs && doctorProfile.docs.length > 0 && doctorProfile.docs.every((d: any) => d.status === 'APPROVED');
@@ -183,7 +183,10 @@ export default function DoctorHomeScreen() {
           </View>
         </View>
 
-        <TranslatedText text={item.description} style={[styles.description, { color: theme.text }]} />
+        <TranslatedText 
+          text={item.description} 
+          style={[styles.description, { color: theme.text }]} 
+        />
 
         {photoFullUrl && (
           <TouchableOpacity

@@ -169,6 +169,31 @@
   "failed_to_pick_doc": "নথি নির্বাচন করতে ব্যর্থ হয়েছে",
   "doc_notice_title": "বিজ্ঞপ্তি",
   "error": "ত্রুটি",
-  "success": "সফল"
+  "success": "সফল",
+  "translated_to": "তে অনূদিত",
+  "more_languages": "অন্যান্য ভাষা",
+  "hide": "লুকান",
+  "prescription_treatment_plan": "প্রেসক্রিপশন ও চিকিৎসা পরিকল্পনা",
+  "prescriptions_label": "নির্ধারিত ওষুধসমূহ",
+  "medication": "ওষুধ",
+  "medicine_name": "ওষুধের নাম",
+  "dosage": "ডোজ (Dosage)",
+  "instructions_description": "নির্দেশাবলী / বিবরণ",
+  "no_prescription_issued": "এই পরিদর্শনের জন্য নির্দিষ্ট কোনো ওষুধ দেওয়া হয়নি।",
+  "doctor_clinical_notes": "ডাক্তারের ক্লিনিক্যাল নোট এবং যত্নের পরামর্শ",
+  "complete_treatment_btn": "চিকিৎসা সম্পন্ন করুন এবং প্রেসক্রিপশন দিন",
+  "add_medicine": "+ ওষুধ যোগ করুন",
+  "enter_medicine_name": "ওষুধের নাম, যেমন: Meloxicam 250mg syrup",
+  "enter_dosage": "ডোজ, যেমন: 5ml মুখে",
+  "enter_instructions": "বিবরণ, যেমন: ৫ দিন পর দিন",
+  "clinical_notes_placeholder": "ক্লিনিক্যাল নোট, যেমন: রোগ নির্ণয়, প্রদত্ত চিকিৎসা এবং পরামর্শ (ন্যূনতম ২০ অক্ষর)...",
+  "doctor_notes_min_error": "ডাক্তারের ক্লিনিক্যাল নোট অন্তত ২০ অক্ষরের হতে হবে।",
+  "treatment_submitted_waiting": "চিকিৎসা জমা দেওয়া হয়েছে — রেটিংয়ের অপেক্ষায়",
+  "treatment_submitted_sub": "আপনি চিকিৎসা সম্পন্ন করেছেন এবং প্রেসক্রিপশন দিয়েছেন। মালিক রসিদ নিশ্চিত করে রেটিং দেবেন।",
+  "doctor_completed_treatment_title": "ডাক্তার চিকিৎসা সম্পন্ন করেছেন!",
+  "doctor_completed_treatment_sub": "পশু চিকিৎসক সাইটে চিকিৎসা সম্পন্ন করেছেন এবং নিচে প্রেসক্রিপশন দিয়েছেন। অনুগ্রহ করে সেবা নিশ্চিত করুন এবং অভিজ্ঞতা রেট করুন।",
+  "confirm_and_rate_btn": "সেবা নিশ্চিত করুন এবং কেস বন্ধ করুন",
+  "treatment_details": "চিকিৎসা ও প্রেসক্রিপশন বিবরণ"
 }
+
 

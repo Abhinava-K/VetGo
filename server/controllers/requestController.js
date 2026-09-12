@@ -166,7 +166,81 @@ exports.startRequest = async (req, res) => {
   }
 };
 
-// @desc    Complete a request
+// @desc    Doctor completes treatment and issues prescription
+// @route   POST /api/requests/:id/treatment-complete
+exports.completeTreatment = async (req, res) => {
+  try {
+    const requestId = req.params.id;
+    const doctorId = req.user.id;
+    const { prescriptions, doctorNotes } = req.body;
+
+    if (!doctorNotes || typeof doctorNotes !== 'string' || doctorNotes.trim().length < 20) {
+      return res.status(400).json({ 
+        message: 'Doctor clinical notes are mandatory and must be at least 20 characters long.' 
+      });
+    }
+
+    const request = await RequestModel.findOne({
+      _id: requestId,
+      acceptedBy: doctorId,
+      status: { $in: ['ASSIGNED', 'IN_PROGRESS'] }
+    });
+
+    if (!request) {
+      return res.status(404).json({ message: 'Active request not found or not assigned to you' });
+    }
+
+    // Format and sanitize prescriptions, ensuring all fields are filled
+    let cleanPrescriptions = [];
+    if (Array.isArray(prescriptions) && prescriptions.length > 0) {
+      for (let i = 0; i < prescriptions.length; i++) {
+        const p = prescriptions[i];
+        if (
+          !p || 
+          !p.medicineName || !p.medicineName.trim() || 
+          !p.dosage || !p.dosage.trim() || 
+          !p.description || !p.description.trim()
+        ) {
+          return res.status(400).json({ 
+            message: `All fields (Medicine Name, Dosage, and Description) are required for medication #${i + 1}.` 
+          });
+        }
+        cleanPrescriptions.push({
+          medicineName: p.medicineName.trim(),
+          dosage: p.dosage.trim(),
+          description: p.description.trim()
+        });
+      }
+    }
+
+    request.status = 'TREATMENT_COMPLETED';
+    request.prescriptions = cleanPrescriptions;
+    request.doctorNotes = doctorNotes.trim();
+    request.doctorCompletedAt = Date.now();
+    await request.save();
+
+    // Notify pet owner in real-time
+    const io = req.app.get('io');
+    if (io && request.userId) {
+      io.to(request.userId.toString()).emit('request:treatment_completed', {
+        requestId: request._id,
+        prescriptions: cleanPrescriptions,
+        doctorNotes: request.doctorNotes,
+        status: 'TREATMENT_COMPLETED'
+      });
+    }
+
+    res.json({
+      message: 'Treatment submitted and prescription issued successfully',
+      request
+    });
+  } catch (error) {
+    console.error('Error completing treatment:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Complete a request (User rating & final closure)
 // @route   POST /api/requests/:id/complete
 exports.completeRequest = async (req, res) => {
   try {
@@ -186,6 +260,7 @@ exports.completeRequest = async (req, res) => {
 
     request.status = 'COMPLETED';
     request.completedAt = Date.now();
+    request.userCompletedAt = Date.now();
     if (resolutionNotes) {
       request.resolutionNotes = resolutionNotes;
     }
@@ -197,18 +272,27 @@ exports.completeRequest = async (req, res) => {
     if (rating && request.acceptedBy) {
       const doctorProfile = await DoctorProfile.findOne({ userId: request.acceptedBy });
       if (doctorProfile) {
-        const totalScore = (doctorProfile.ratingAvg * doctorProfile.ratingCount) + rating;
-        doctorProfile.ratingCount += 1;
-        doctorProfile.ratingAvg = totalScore / doctorProfile.ratingCount;
+        const count = (doctorProfile.ratingCount || 0) + 1;
+        const currentTotal = (doctorProfile.ratingAvg || 5.0) * (doctorProfile.ratingCount || 0);
+        doctorProfile.ratingCount = count;
+        doctorProfile.ratingAvg = Number(((currentTotal + rating) / count).toFixed(2));
         doctorProfile.currentlyAssignedRequest = null;
         doctorProfile.available = true;
         await doctorProfile.save();
       }
+    } else if (request.acceptedBy) {
+      await DoctorProfile.findOneAndUpdate(
+        { userId: request.acceptedBy },
+        { currentlyAssignedRequest: null, available: true }
+      );
     }
 
     const io = req.app.get('io');
     if (io && request.acceptedBy) {
-      io.to(request.acceptedBy.toString()).emit('request:completed', { requestId: request._id });
+      io.to(request.acceptedBy.toString()).emit('request:completed', { 
+        requestId: request._id,
+        rating: request.rating
+      });
     }
 
     res.json({ message: 'Request completed and rated', request });

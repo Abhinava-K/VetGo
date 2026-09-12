@@ -2,7 +2,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // In-memory cache for instant session lookups without network latency
 const memoryCache = new Map<string, string>();
-const CACHE_PREFIX = '@vetgo_trans_v2_';
+const CACHE_PREFIX = '@vetgo_trans_v3_';
+
+export interface TranslationResult {
+  translatedText: string;
+  detectedLang?: string;
+  targetLang: string;
+  isSameLanguage: boolean;
+}
 
 /**
  * Generate a cache key based on transcript hash and target language
@@ -36,16 +43,18 @@ const decodeHTMLEntities = (str: string): string => {
 /**
  * Normalize language codes (e.g. 'hi-IN' -> 'hi', 'bn' -> 'bn')
  */
-const normalizeLangCode = (lang: string): string => {
+export const normalizeLangCode = (lang: string): string => {
   if (!lang) return 'en';
   return lang.toLowerCase().split('-')[0];
 };
 
 /**
- * Primary Provider: Free Google Translate GTX Endpoint
- * Highly accurate neural machine translation for Indic & global languages (bn, hi, kn, mr, ta, te, en)
+ * Primary Provider: Google Translate GTX Endpoint
  */
-const translateWithGoogleGTX = async (text: string, targetLang: string): Promise<string | null> => {
+const translateWithGoogleGTX = async (
+  text: string, 
+  targetLang: string
+): Promise<{ text: string; detectedLang?: string } | null> => {
   try {
     const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`;
     const response = await fetch(url);
@@ -57,18 +66,52 @@ const translateWithGoogleGTX = async (text: string, targetLang: string): Promise
         .map((segment: any) => (Array.isArray(segment) && typeof segment[0] === 'string' ? segment[0] : ''))
         .join('');
 
+      const detectedLang = typeof data[2] === 'string' ? data[2] : undefined;
+
       if (translated && translated.trim()) {
-        return decodeHTMLEntities(translated);
+        return {
+          text: decodeHTMLEntities(translated),
+          detectedLang
+        };
       }
     }
     return null;
-  } catch (err) {
+  } catch {
     return null;
   }
 };
 
 /**
- * Secondary Provider: Lingva Open-Source Translation Proxy
+ * Secondary Provider: Google Dict-Chrome Endpoint (Clients5)
+ */
+const translateWithGoogleClients5 = async (
+  text: string, 
+  targetLang: string
+): Promise<{ text: string; detectedLang?: string } | null> => {
+  try {
+    const url = `https://clients5.google.com/translate_a/t?client=dict-chrome-ex&sl=auto&tl=${targetLang}&q=${encodeURIComponent(text)}`;
+    const response = await fetch(url);
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    if (Array.isArray(data) && Array.isArray(data[0]) && typeof data[0][0] === 'string') {
+      const translated = data[0][0];
+      const detectedLang = typeof data[0][1] === 'string' ? data[0][1] : undefined;
+      if (translated && translated.trim()) {
+        return {
+          text: decodeHTMLEntities(translated),
+          detectedLang
+        };
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Tertiary Provider: Lingva Open-Source Translation Proxy
  */
 const translateWithLingva = async (text: string, targetLang: string): Promise<string | null> => {
   const mirrors = [
@@ -93,7 +136,7 @@ const translateWithLingva = async (text: string, targetLang: string): Promise<st
 };
 
 /**
- * Tertiary Provider: MyMemory API (Filtered fallback with autodetect)
+ * Quaternary Provider: MyMemory API (Filtered fallback with autodetect)
  */
 const translateWithMyMemory = async (text: string, targetLang: string): Promise<string | null> => {
   try {
@@ -122,7 +165,6 @@ const translateWithMyMemory = async (text: string, targetLang: string): Promise<
  * Split long transcripts into smaller chunks for safer translation requests
  */
 const translateInChunks = async (text: string, targetLang: string): Promise<string> => {
-  // Split by double line breaks or sentences if text is very long
   const chunks = text.split(/(\n+|\. )/).filter(Boolean);
   const results: string[] = [];
 
@@ -132,7 +174,12 @@ const translateInChunks = async (text: string, targetLang: string): Promise<stri
       continue;
     }
 
-    let translatedChunk = await translateWithGoogleGTX(chunk, targetLang);
+    const gtx = await translateWithGoogleGTX(chunk, targetLang);
+    let translatedChunk = gtx?.text;
+    if (!translatedChunk) {
+      const c5 = await translateWithGoogleClients5(chunk, targetLang);
+      translatedChunk = c5?.text;
+    }
     if (!translatedChunk) {
       translatedChunk = await translateWithLingva(chunk, targetLang);
     }
@@ -146,58 +193,103 @@ const translateInChunks = async (text: string, targetLang: string): Promise<stri
 };
 
 /**
- * Main Dynamic Transcript Translation Function
- * Real-time translation engine with dual-layer caching and multi-tier engine waterfall.
+ * Comprehensive Dynamic Transcript Translation Function with Full Metadata
  */
-export const translateText = async (text: string, targetLang: string = 'en'): Promise<string> => {
-  if (!text || !text.trim()) return text;
+export const translateTextDetailed = async (
+  text: string, 
+  targetLang: string = 'en'
+): Promise<TranslationResult> => {
+  if (!text || !text.trim()) {
+    return {
+      translatedText: text,
+      targetLang,
+      isSameLanguage: true
+    };
+  }
 
   const normLang = normalizeLangCode(targetLang);
   const trimmedText = text.trim();
   const cacheKey = getCacheKey(trimmedText, normLang);
 
-  // 1. Instant check: In-memory cache
+  // 1. In-memory cache check
   if (memoryCache.has(cacheKey)) {
-    return memoryCache.get(cacheKey)!;
+    const cached = memoryCache.get(cacheKey)!;
+    return {
+      translatedText: cached,
+      targetLang: normLang,
+      isSameLanguage: cached.toLowerCase() === trimmedText.toLowerCase()
+    };
   }
 
-  // 2. Check persistent AsyncStorage cache
+  // 2. Persistent cache check
   try {
     const cached = await AsyncStorage.getItem(cacheKey);
     if (cached) {
       memoryCache.set(cacheKey, cached);
-      return cached;
+      return {
+        translatedText: cached,
+        targetLang: normLang,
+        isSameLanguage: cached.toLowerCase() === trimmedText.toLowerCase()
+      };
     }
   } catch {
-    // Proceed to network fetch if cache read fails
+    // Proceed to network fetch
   }
 
   let finalTranslation: string | null = null;
+  let detectedLang: string | undefined = undefined;
 
-  // Handle long transcripts (> 1000 characters) by chunking safely
   if (trimmedText.length > 1000) {
     finalTranslation = await translateInChunks(trimmedText, normLang);
   } else {
-    // 3. Multi-tier waterfall fetch
-    finalTranslation = await translateWithGoogleGTX(trimmedText, normLang);
+    // Primary: Google GTX
+    const gtxRes = await translateWithGoogleGTX(trimmedText, normLang);
+    if (gtxRes) {
+      finalTranslation = gtxRes.text;
+      detectedLang = gtxRes.detectedLang;
+    }
 
+    // Secondary: Google Clients5
+    if (!finalTranslation) {
+      const c5Res = await translateWithGoogleClients5(trimmedText, normLang);
+      if (c5Res) {
+        finalTranslation = c5Res.text;
+        detectedLang = c5Res.detectedLang;
+      }
+    }
+
+    // Tertiary: Lingva
     if (!finalTranslation) {
       finalTranslation = await translateWithLingva(trimmedText, normLang);
     }
 
+    // Quaternary: MyMemory
     if (!finalTranslation) {
       finalTranslation = await translateWithMyMemory(trimmedText, normLang);
     }
   }
 
   const resultText = finalTranslation && finalTranslation.trim() ? finalTranslation : trimmedText;
+  const isSameLanguage = resultText.toLowerCase() === trimmedText.toLowerCase();
 
-  // 4. Save successful translation to both memory and AsyncStorage
+  // Save to cache
   if (resultText !== trimmedText) {
     memoryCache.set(cacheKey, resultText);
     AsyncStorage.setItem(cacheKey, resultText).catch(() => {});
   }
 
-  return resultText;
+  return {
+    translatedText: resultText,
+    detectedLang,
+    targetLang: normLang,
+    isSameLanguage
+  };
 };
 
+/**
+ * Simple string translation helper (backwards compatible)
+ */
+export const translateText = async (text: string, targetLang: string = 'en'): Promise<string> => {
+  const result = await translateTextDetailed(text, targetLang);
+  return result.translatedText;
+};

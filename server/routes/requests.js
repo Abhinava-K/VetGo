@@ -6,6 +6,7 @@ const {
   createRequest, 
   acceptRequest, 
   startRequest,
+  completeTreatment,
   completeRequest,
   getMyRequests,
   getOpenRequests,
@@ -65,6 +66,7 @@ router.post(
 );
 router.post('/:id/accept', protect, authorize('DOCTOR'), acceptRequest);
 router.post('/:id/start', protect, authorize('DOCTOR'), startRequest);
+router.post('/:id/treatment-complete', protect, authorize('DOCTOR'), completeTreatment);
 router.post('/:id/complete', protect, authorize('USER'), completeRequest);
 
 module.exports = router;

@@ -16,10 +16,13 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemeContext } from '../../context/ThemeContext';
+import { useTranslation } from '../../i18n';
 import api from '../../services/api';
 import { initSocket } from '../../services/socket';
 import ReportModal from '../../components/common/ReportModal';
 import TranslatedText from '../../components/common/TranslatedText';
+import TreatmentCompleteModal from '../../components/doctor/TreatmentCompleteModal';
+import PrescriptionEmbedCard from '../../components/common/PrescriptionEmbedCard';
 
 export default function AssignedRequestScreen() {
   const [request, setRequest] = useState<any>(null);
@@ -27,13 +30,15 @@ export default function AssignedRequestScreen() {
   const [starting, setStarting] = useState(false);
   const [showImageModal, setShowImageModal] = useState(false);
   const [reportModalVisible, setReportModalVisible] = useState(false);
+  const [treatmentModalVisible, setTreatmentModalVisible] = useState(false);
 
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { requestId } = route.params || {};
 
   const insets = useSafeAreaInsets();
-  const { theme } = useContext(ThemeContext);
+  const { theme, isDark } = useContext(ThemeContext);
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (requestId) {
@@ -239,7 +244,7 @@ export default function AssignedRequestScreen() {
         </View>
 
         {/* Visit Control Action */}
-        {!isStarted ? (
+        {request?.status === 'ASSIGNED' && (
           <TouchableOpacity
             style={styles.startBtn}
             onPress={handleStartVisit}
@@ -254,16 +259,60 @@ export default function AssignedRequestScreen() {
               </>
             )}
           </TouchableOpacity>
-        ) : (
-          <View style={styles.inProgressBox}>
-            <Ionicons name="checkmark-circle" size={24} color="#10B981" />
-            <Text style={styles.inProgressText}>Visit In Progress — Tending to Animal</Text>
-            <Text style={styles.inProgressSub}>
-              The pet owner will complete and rate the visit once service is finished.
+        )}
+
+        {request?.status === 'IN_PROGRESS' && (
+          <View style={[styles.inProgressBox, { backgroundColor: isDark ? '#1e293b' : '#ECFDF5', borderColor: '#10B981' }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+              <Ionicons name="medical" size={22} color="#10B981" style={{ marginRight: 8 }} />
+              <Text style={[styles.inProgressText, { color: '#10B981' }]}>Visit In Progress</Text>
+            </View>
+            <Text style={[styles.inProgressSub, { color: theme.textSecondary }]}>
+              Once you finish treating the animal, tap below to issue prescriptions and submit clinical notes.
             </Text>
+
+            <TouchableOpacity
+              style={[styles.prescribeBtn, { backgroundColor: '#10B981' }]}
+              onPress={() => setTreatmentModalVisible(true)}
+            >
+              <Ionicons name="clipboard-outline" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+              <Text style={styles.prescribeBtnText}>
+                {t('complete_treatment_btn')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {request?.status === 'TREATMENT_COMPLETED' && (
+          <View style={{ marginTop: 10 }}>
+            <View style={[styles.submittedBanner, { backgroundColor: isDark ? '#14532D30' : '#DCFCE7', borderColor: '#22C55E' }]}>
+              <Ionicons name="hourglass-outline" size={24} color="#16A34A" />
+              <View style={{ flex: 1, marginLeft: 10 }}>
+                <Text style={[styles.submittedTitle, { color: isDark ? '#4ADE80' : '#15803D' }]}>
+                  {t('treatment_submitted_waiting')}
+                </Text>
+                <Text style={[styles.submittedSub, { color: isDark ? '#86EFAC' : '#166534' }]}>
+                  {t('treatment_submitted_sub')}
+                </Text>
+              </View>
+            </View>
+
+            {/* Embed Preview of Prescription & Notes */}
+            <PrescriptionEmbedCard 
+              prescriptions={request?.prescriptions}
+              doctorNotes={request?.doctorNotes}
+            />
           </View>
         )}
       </ScrollView>
+
+      {/* Doctor Treatment Complete Modal */}
+      <TreatmentCompleteModal
+        visible={treatmentModalVisible}
+        onClose={() => setTreatmentModalVisible(false)}
+        requestId={requestId}
+        onSuccess={fetchRequestDetails}
+      />
 
       {/* Full-Screen Injury Image Modal */}
       <Modal
@@ -467,9 +516,46 @@ const styles = StyleSheet.create({
   },
   inProgressSub: {
     color: '#047857',
-    fontSize: 12,
+    fontSize: 13,
     textAlign: 'center',
     marginTop: 4,
+    marginBottom: 14,
+    lineHeight: 18,
+  },
+  prescribeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    height: 48,
+    borderRadius: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  prescribeBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+    fontSize: 15,
+  },
+  submittedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    marginBottom: 8,
+  },
+  submittedTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    marginBottom: 2,
+  },
+  submittedSub: {
+    fontSize: 12,
+    lineHeight: 16,
   },
   injuryPhotoBox: {
     marginTop: 10,

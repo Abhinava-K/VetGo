@@ -169,6 +169,31 @@
   "failed_to_pick_doc": "दस्तऐवज निवडण्यात अयशस्वी",
   "doc_notice_title": "सूचना",
   "error": "त्रुटी",
-  "success": "यशस्वी"
+  "success": "यशस्वी",
+  "translated_to": "मध्ये अनुवादित",
+  "more_languages": "इतर भाषा",
+  "hide": "लपवा",
+  "prescription_treatment_plan": "औषध आणि उपचार योजना",
+  "prescriptions_label": "निश्चित केलेली औषधे",
+  "medication": "औषध",
+  "medicine_name": "औषधाचे नाव",
+  "dosage": "डोस (Dosage)",
+  "instructions_description": "सूचना / वर्णन",
+  "no_prescription_issued": "या भेटीसाठी कोणतीही विशिष्ट औषधे लिहून दिलेली नाहीत.",
+  "doctor_clinical_notes": "डॉक्टरांच्या वैद्यकीय नोंदी आणि काळजी सल्ला",
+  "complete_treatment_btn": "उपचार पूर्ण करा आणि प्रिस्क्रिप्शन द्या",
+  "add_medicine": "+ औषध जोडा",
+  "enter_medicine_name": "औषधाचे नाव, उदा: Meloxicam 250mg syrup",
+  "enter_dosage": "डोस, उदा: 5ml तोंडावाटे",
+  "enter_instructions": "वर्णन, उदा: 5 दिवसांनंतर द्या",
+  "clinical_notes_placeholder": "वैद्यकीय नोंदी, उदा: निदान, दिलेले उपचार आणि काळजीचा सल्ला (किमान 20 अक्षरे)...",
+  "doctor_notes_min_error": "डॉक्टरांच्या वैद्यकीय नोंदी किमान २० अक्षरांच्या असणे आवश्यक आहे.",
+  "treatment_submitted_waiting": "उपचार सादर केले — पाळीव प्राण्याच्या मालकाच्या रेटिंगची प्रतीक्षा आहे",
+  "treatment_submitted_sub": "तुम्ही उपचार पूर्ण केले आहेत आणि प्रिस्क्रिप्शन जारी केले आहे. मालक पावतीची पुष्टी करेल आणि सेवेला रेट करेल.",
+  "doctor_completed_treatment_title": "डॉक्टरांनी उपचार पूर्ण केले!",
+  "doctor_completed_treatment_sub": "पशुवैद्यकाने प्रत्यक्ष उपचार पूर्ण केले आहेत आणि खाली तुमचे प्रिस्क्रिप्शन दिले आहे. कृपया सेवेची पुष्टी करा आणि आपला अनुभव नोंदवा.",
+  "confirm_and_rate_btn": "सेवेची पुष्टी करा आणि केस बंद करा",
+  "treatment_details": "उपचार आणि प्रिस्क्रिप्शन तपशील"
 }
+
 

@@ -15,11 +15,12 @@ import {
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { FontAwesome, Ionicons } from '@expo/vector-icons';
 import { ThemeContext } from '../../context/ThemeContext';
 import api from '../../services/api';
 import ReportModal from '../../components/common/ReportModal';
 import TranslatedText from '../../components/common/TranslatedText';
+import PrescriptionEmbedCard from '../../components/common/PrescriptionEmbedCard';
 import { useTranslation } from '../../i18n';
 
 export default function RequestsScreen() {
@@ -71,9 +72,9 @@ export default function RequestsScreen() {
     const stars = [];
     for (let i = 1; i <= 5; i++) {
       stars.push(
-        <Ionicons 
+        <FontAwesome 
           key={i} 
-          name={i <= score ? 'star' : 'star-outline'} 
+          name={i <= score ? 'star' : 'star-o'} 
           size={16} 
           color="#F59E0B" 
           style={{ marginRight: 2 }}
@@ -84,7 +85,12 @@ export default function RequestsScreen() {
   };
 
   const handleRequestPress = (item: any) => {
-    if (item.status === 'ASSIGNED' || item.status === 'IN_PROGRESS' || item.status === 'OPEN') {
+    if (
+      item.status === 'ASSIGNED' || 
+      item.status === 'IN_PROGRESS' || 
+      item.status === 'OPEN' || 
+      item.status === 'TREATMENT_COMPLETED'
+    ) {
       navigation.navigate('RequestStatus', { requestId: item._id });
     } else {
       setSelectedCase(item);
@@ -409,8 +415,14 @@ export default function RequestsScreen() {
                   </View>
                 )}
 
-                {/* Doctor Resolution / Treatment Notes */}
-                {selectedCase.resolutionNotes ? (
+                {/* Prescription & Doctor Clinical Notes Embed Card */}
+                <PrescriptionEmbedCard 
+                  prescriptions={selectedCase.prescriptions}
+                  doctorNotes={selectedCase.doctorNotes || selectedCase.resolutionNotes}
+                />
+
+                {/* Legacy Doctor Resolution Notes (if no doctorNotes present) */}
+                {(!selectedCase.doctorNotes && selectedCase.resolutionNotes && (!selectedCase.prescriptions || selectedCase.prescriptions.length === 0)) ? (
                   <View style={[styles.modalSectionCard, { backgroundColor: `${theme.primary}0F`, borderColor: theme.primary }]}>
                     <Text style={[styles.sectionHeading, { color: theme.primary }]}>{t('treatment_resolution_notes')}</Text>
                     <TranslatedText 

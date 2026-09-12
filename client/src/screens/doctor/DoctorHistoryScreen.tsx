@@ -20,6 +20,7 @@ import { ThemeContext } from '../../context/ThemeContext';
 import api from '../../services/api';
 import ReportModal from '../../components/common/ReportModal';
 import TranslatedText from '../../components/common/TranslatedText';
+import PrescriptionEmbedCard from '../../components/common/PrescriptionEmbedCard';
 import { useTranslation } from '../../i18n';
 
 export default function DoctorHistoryScreen() {
@@ -409,8 +410,14 @@ export default function DoctorHistoryScreen() {
                   </View>
                 )}
 
-                {/* Doctor Resolution / Treatment Notes */}
-                {selectedCase.resolutionNotes ? (
+                {/* Prescription & Doctor Clinical Notes Embed Card */}
+                <PrescriptionEmbedCard 
+                  prescriptions={selectedCase.prescriptions}
+                  doctorNotes={selectedCase.doctorNotes || selectedCase.resolutionNotes}
+                />
+
+                {/* Legacy Doctor Resolution Notes (if no doctorNotes present) */}
+                {(!selectedCase.doctorNotes && selectedCase.resolutionNotes && (!selectedCase.prescriptions || selectedCase.prescriptions.length === 0)) ? (
                   <View style={[styles.modalSectionCard, { backgroundColor: `${theme.primary}0F`, borderColor: theme.primary }]}>
                     <Text style={[styles.sectionHeading, { color: theme.primary }]}>{t('treatment_resolution_notes')}</Text>
                     <TranslatedText 

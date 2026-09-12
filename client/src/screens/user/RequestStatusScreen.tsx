@@ -8,15 +8,19 @@ import {
   ActivityIndicator,
   Modal,
   TextInput,
-  Alert
+  Alert,
+  ScrollView
 } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useRoute, useNavigation } from '@react-navigation/native';
+import { FontAwesome, Ionicons } from '@expo/vector-icons';
 import { ThemeContext } from '../../context/ThemeContext';
+import { useTranslation } from '../../i18n';
 import { getSocket } from '../../services/socket';
 import api from '../../services/api';
 import { Request } from '../../types';
 import ReportModal from '../../components/common/ReportModal';
+import PrescriptionEmbedCard from '../../components/common/PrescriptionEmbedCard';
 
 export default function RequestStatusScreen() {
   const route = useRoute<any>();
@@ -28,9 +32,11 @@ export default function RequestStatusScreen() {
   const [ratingModal, setRatingModal] = useState(false);
   const [rating, setRating] = useState(5);
   const [review, setReview] = useState('');
+  const [submittingRating, setSubmittingRating] = useState(false);
   const [reportModalVisible, setReportModalVisible] = useState(false);
 
-  const { theme } = useContext(ThemeContext);
+  const { theme, isDark } = useContext(ThemeContext);
+  const { t } = useTranslation();
   const socket = getSocket();
 
   useEffect(() => {
@@ -42,6 +48,9 @@ export default function RequestStatusScreen() {
     try {
       const { data } = await api.get(`/requests/${requestId}`);
       setRequest(data);
+      if (data.status === 'TREATMENT_COMPLETED') {
+        setRatingModal(true);
+      }
     } catch (error) {
       console.error('Error fetching request:', error);
     }
@@ -57,6 +66,16 @@ export default function RequestStatusScreen() {
         setDoctorLoc({ latitude: data.lat, longitude: data.lng });
       });
 
+      socket.on('request:treatment_completed', (data) => {
+        setRequest((prev: any) => ({
+          ...prev,
+          status: 'TREATMENT_COMPLETED',
+          prescriptions: data.prescriptions,
+          doctorNotes: data.doctorNotes,
+        }));
+        setRatingModal(true);
+      });
+
       socket.on('request:completed', () => {
         setRatingModal(true);
       });
@@ -64,16 +83,19 @@ export default function RequestStatusScreen() {
   };
 
   const handleCompleteAndRate = async () => {
+    setSubmittingRating(true);
     try {
       await api.post(`/requests/${requestId}/complete`, {
         rating,
         review
       });
       setRatingModal(false);
-      Alert.alert('Thank you', 'Your feedback helps us improve!');
+      Alert.alert(t('success') || 'Thank you', 'Your feedback has been submitted successfully!');
       navigation.navigate('Map');
     } catch (error) {
-      Alert.alert('Error', 'Failed to submit rating');
+      Alert.alert(t('error') || 'Error', 'Failed to submit rating');
+    } finally {
+      setSubmittingRating(false);
     }
   };
 
@@ -85,6 +107,8 @@ export default function RequestStatusScreen() {
       </View>
     );
   }
+
+  const isTreatmentCompleted = request.status === 'TREATMENT_COMPLETED';
 
   return (
     <View style={styles.container}>
@@ -115,7 +139,9 @@ export default function RequestStatusScreen() {
       </MapView>
 
       <View style={[styles.infoCard, { backgroundColor: theme.surface }]}>
-        <Text style={[styles.status, { color: theme.primary }]}>{request.status}</Text>
+        <Text style={[styles.status, { color: isTreatmentCompleted ? '#10B981' : theme.primary }]}>
+          {request.status.replace('_', ' ')}
+        </Text>
 
         {request.status === 'OPEN' ? (
           <Text style={{ color: theme.textSecondary }}>Waiting for a doctor to accept your request...</Text>
@@ -130,6 +156,7 @@ export default function RequestStatusScreen() {
             <Text style={{ color: theme.textSecondary, marginTop: 2 }}>
               {request.doctor?.qualification || request.mockDoctor?.qualification || 'Veterinary Specialist'}
             </Text>
+            
             <TouchableOpacity
               style={[styles.callBtn, { backgroundColor: theme.primary }]}
               onPress={() => {
@@ -144,14 +171,30 @@ export default function RequestStatusScreen() {
               <Text style={styles.callBtnText}>📞 Call Doctor</Text>
             </TouchableOpacity>
 
-            {(request.status === 'ASSIGNED' || request.status === 'IN_PROGRESS') && (
+            {isTreatmentCompleted ? (
               <TouchableOpacity
-                style={[styles.completeBtn, { backgroundColor: theme.secondary, marginTop: 10 }]}
+                style={[styles.completeBtn, { backgroundColor: '#10B981', marginTop: 10 }]}
                 onPress={() => setRatingModal(true)}
               >
-                <Text style={styles.completeBtnText}>Complete & Rate Service</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <FontAwesome name="star" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+                  <Text style={styles.completeBtnText}>{t('confirm_and_rate_btn')}</Text>
+                </View>
               </TouchableOpacity>
+            ) : (
+              (request.status === 'ASSIGNED' || request.status === 'IN_PROGRESS') && (
+                <TouchableOpacity
+                  style={[styles.completeBtn, { backgroundColor: theme.secondary, marginTop: 10 }]}
+                  onPress={() => setRatingModal(true)}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <FontAwesome name="star-o" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+                    <Text style={styles.completeBtnText}>Complete & Rate Service</Text>
+                  </View>
+                </TouchableOpacity>
+              )
             )}
+
             <TouchableOpacity
               style={[styles.reportBtn, { marginTop: 10 }]}
               onPress={() => setReportModalVisible(true)}
@@ -162,31 +205,87 @@ export default function RequestStatusScreen() {
         )}
       </View>
 
+      {/* Rating & Prescription Confirmation Modal */}
       <Modal visible={ratingModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: theme.surface }]}>
-            <Text style={[styles.modalTitle, { color: theme.text }]}>Rate the Service</Text>
-            <View style={styles.stars}>
-              {[1, 2, 3, 4, 5].map(s => (
-                <TouchableOpacity key={s} onPress={() => setRating(s)}>
-                  <Text style={{ fontSize: 30 }}>{s <= rating ? '⭐' : '☆'}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <TextInput
-              style={[styles.reviewInput, { borderColor: theme.border, color: theme.text }]}
-              placeholder="Leave a review (optional)"
-              placeholderTextColor={theme.textSecondary}
-              value={review}
-              onChangeText={setReview}
-              multiline
-            />
-            <TouchableOpacity
-              style={[styles.submitBtn, { backgroundColor: theme.primary }]}
-              onPress={handleCompleteAndRate}
+            <ScrollView 
+              style={{ width: '100%' }}
+              contentContainerStyle={{ width: '100%', paddingBottom: 6 }}
+              showsVerticalScrollIndicator={false}
             >
-              <Text style={styles.submitBtnText}>Submit & Complete</Text>
-            </TouchableOpacity>
+              <Text style={[styles.modalTitle, { color: theme.text }]}>
+                {isTreatmentCompleted ? t('doctor_completed_treatment_title') : 'Rate the Service'}
+              </Text>
+              
+              {isTreatmentCompleted && (
+                <Text style={[styles.modalSub, { color: theme.textSecondary }]}>
+                  {t('doctor_completed_treatment_sub')}
+                </Text>
+              )}
+
+              {/* Digital Prescription Preview if issued */}
+              {(request.prescriptions?.length > 0 || request.doctorNotes) && (
+                <PrescriptionEmbedCard 
+                  prescriptions={request.prescriptions}
+                  doctorNotes={request.doctorNotes}
+                />
+              )}
+
+              <Text style={[styles.rateLabel, { color: theme.text }]}>
+                Rate your experience with Dr.
+              </Text>
+
+              {/* Chubby Star Icons */}
+              <View style={styles.stars}>
+                {[1, 2, 3, 4, 5].map(s => (
+                  <TouchableOpacity 
+                    key={s} 
+                    onPress={() => setRating(s)}
+                    style={styles.starTouchable}
+                    activeOpacity={0.7}
+                  >
+                    <FontAwesome 
+                      name={s <= rating ? "star" : "star-o"} 
+                      size={38} 
+                      color={s <= rating ? "#F59E0B" : (isDark ? "#475569" : "#CBD5E1")} 
+                    />
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <TextInput
+                style={[
+                  styles.reviewInput, 
+                  { 
+                    borderColor: theme.border, 
+                    color: theme.text, 
+                    backgroundColor: isDark ? '#141e2e' : '#F8FAFC' 
+                  }
+                ]}
+                placeholder="Leave feedback on the doctor's care (optional)"
+                placeholderTextColor={theme.textSecondary}
+                value={review}
+                onChangeText={setReview}
+                multiline
+                numberOfLines={3}
+              />
+
+              <TouchableOpacity
+                style={[styles.submitBtn, { backgroundColor: '#10B981' }]}
+                onPress={handleCompleteAndRate}
+                disabled={submittingRating}
+              >
+                {submittingRating ? (
+                  <ActivityIndicator color="#FFF" />
+                ) : (
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Ionicons name="checkmark-done-circle-outline" size={20} color="#FFF" style={{ marginRight: 6 }} />
+                    <Text style={styles.submitBtnText}>{t('confirm_and_rate_btn')}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -246,42 +345,71 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.72)',
     justifyContent: 'center',
-    padding: 20,
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 24,
   },
   modalContent: {
-    padding: 25,
-    borderRadius: 20,
-    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 20,
+    borderRadius: 24,
+    width: '100%',
+    maxHeight: '92%',
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 20,
+    fontWeight: '800',
+    textAlign: 'center',
+    marginBottom: 6,
+  },
+  modalSub: {
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 19,
+    marginBottom: 12,
+    paddingHorizontal: 4,
+  },
+  rateLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    marginTop: 8,
+    marginBottom: 6,
+    textAlign: 'center',
   },
   stars: {
     flexDirection: 'row',
-    marginBottom: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  starTouchable: {
+    padding: 6,
+    marginHorizontal: 4,
   },
   reviewInput: {
     width: '100%',
-    height: 80,
+    minHeight: 70,
     borderWidth: 1,
-    borderRadius: 10,
-    padding: 10,
-    marginBottom: 20,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
     textAlignVertical: 'top',
+    fontSize: 13,
+    lineHeight: 18,
   },
   submitBtn: {
     width: '100%',
-    padding: 15,
-    borderRadius: 12,
+    height: 50,
+    borderRadius: 14,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   submitBtnText: {
     color: '#FFF',
-    fontWeight: 'bold',
+    fontWeight: '800',
+    fontSize: 15,
   },
   completeBtn: {
     padding: 15,

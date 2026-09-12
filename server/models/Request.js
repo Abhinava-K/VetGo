@@ -44,7 +44,7 @@ const requestSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['OPEN', 'ASSIGNED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'],
+    enum: ['OPEN', 'ASSIGNED', 'IN_PROGRESS', 'TREATMENT_COMPLETED', 'COMPLETED', 'CANCELLED', 'REPORTED'],
     default: 'OPEN'
   },
   acceptedBy: {
@@ -57,8 +57,21 @@ const requestSchema = new mongoose.Schema({
     qualification: String,
     phone: String
   },
+  prescriptions: [
+    {
+      medicineName: { type: String, required: true },
+      dosage: { type: String, required: true },
+      description: { type: String, default: '' }
+    }
+  ],
+  doctorNotes: {
+    type: String,
+    default: ''
+  },
   acceptedAt: Date,
   startedAt: Date,
+  doctorCompletedAt: Date,
+  userCompletedAt: Date,
   completedAt: Date,
   rating: {
     score: { type: Number, min: 1, max: 5 },

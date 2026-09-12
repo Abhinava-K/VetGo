@@ -169,6 +169,31 @@
   "failed_to_pick_doc": "ದಾಖಲೆ ಆಯ್ಕೆ ಮಾಡಲು ವಿಫಲವಾಗಿದೆ",
   "doc_notice_title": "ಸೂಚನೆ",
   "error": "ದೋಷ",
-  "success": "ಯಶಸ್ಸು"
+  "success": "ಯಶಸ್ಸು",
+  "translated_to": "ಗೆ ಅನುವಾದಿಸಲಾಗಿದೆ",
+  "more_languages": "ಇತರ ಭಾಷೆಗಳು",
+  "hide": "ಮರೆಮಾಡಿ",
+  "prescription_treatment_plan": "ಔಷಧ ಮತ್ತು ಚಿಕಿತ್ಸಾ ಯೋಜನೆ",
+  "prescriptions_label": "ಸೂಚಿಸಲಾದ ಔಷಧಗಳು",
+  "medication": "ಔಷಧ",
+  "medicine_name": "ಔಷಧದ ಹೆಸರು",
+  "dosage": "ಪ್ರಮಾಣ (Dosage)",
+  "instructions_description": "ಸೂಚನೆಗಳು / ವಿವರಣೆ",
+  "no_prescription_issued": "ಈ ಭೇಟಿಗೆ ಯಾವುದೇ ನಿರ್ದಿಷ್ಟ ಔಷಧಗಳನ್ನು ಸೂಚಿಸಲಾಗಿಲ್ಲ.",
+  "doctor_clinical_notes": "ವೈದ್ಯರ ಕ್ಲಿನಿಕಲ್ ಟಿಪ್ಪಣಿಗಳು ಮತ್ತು ಆರೈಕೆ ಸಲಹೆ",
+  "complete_treatment_btn": "ಚಿಕಿತ್ಸೆ ಪೂರ್ಣಗೊಳಿಸಿ ಪ್ರಿಸ್ಕ್ರಿಪ್ಷನ್ ನೀಡಿ",
+  "add_medicine": "+ ಔಷಧ ಸೇರಿಸಿ",
+  "enter_medicine_name": "ಔಷಧದ ಹೆಸರು, ಉದಾ: Meloxicam 250mg syrup",
+  "enter_dosage": "ಪ್ರಮಾಣ, ಉದಾ: 5ml ಬಾಯಿಯ ಮೂಲಕ",
+  "enter_instructions": "ವಿವರಣೆ, ಉದಾ: 5 ದಿನಗಳ ನಂತರ ನೀಡಿ",
+  "clinical_notes_placeholder": "ಕ್ಲಿನಿಕಲ್ ಟಿಪ್ಪಣಿಗಳು, ಉದಾ: ರೋಗನಿರ್ಣಯ, ಚಿಕಿತ್ಸೆ ಮತ್ತು ಆರೈಕೆ (ಕನಿಷ್ಠ 20 ಅಕ್ಷರಗಳು)...",
+  "doctor_notes_min_error": "ವೈದ್ಯರ ಕ್ಲಿನಿಕಲ್ ಟಿಪ್ಪಣಿಗಳು ಕನಿಷ್ಠ 20 ಅಕ್ಷರಗಳನ್ನು ಹೊಂದಿರಬೇಕು.",
+  "treatment_submitted_waiting": "ಚಿಕಿತ್ಸೆ ಸಲ್ಲಿಸಲಾಗಿದೆ — ಮಾಲೀಕರ ರೇಟಿಂಗ್‌ಗಾಗಿ ಕಾಯಲಾಗುತ್ತಿದೆ",
+  "treatment_submitted_sub": "ನೀವು ಚಿಕಿತ್ಸೆಯನ್ನು ಪೂರ್ಣಗೊಳಿಸಿ ಪ್ರಿಸ್ಕ್ರಿಪ್ಷನ್ ನೀಡಿದ್ದೀರಿ. ಮಾಲೀಕರು ರಶೀದಿಯನ್ನು ಖಚಿತಪಡಿಸಿ ರೇಟಿಂಗ್ ನೀಡುತ್ತಾರೆ.",
+  "doctor_completed_treatment_title": "ವೈದ್ಯರು ಚಿಕಿತ್ಸೆಯನ್ನು ಪೂರ್ಣಗೊಳಿಸಿದ್ದಾರೆ!",
+  "doctor_completed_treatment_sub": "ಪಶುವೈದ್ಯರು ಚಿಕಿತ್ಸೆಯನ್ನು ಪೂರ್ಣಗೊಳಿಸಿ ನಿಮ್ಮ ಪ್ರಿಸ್ಕ್ರಿಪ್ಷನ್ ಕೆಳಗೆ ನೀಡಿದ್ದಾರೆ. ದಯವಿಟ್ಟು ಸೇವೆಯನ್ನು ದೃಢೀಕರಿಸಿ ರೇಟಿಂಗ್ ನೀಡಿ.",
+  "confirm_and_rate_btn": "ಸೇವೆಯನ್ನು ದೃಢೀಕರಿಸಿ ಪ್ರಕರಣವನ್ನು ಮುಕ್ತಾಯಗೊಳಿಸಿ",
+  "treatment_details": "ಚಿಕಿತ್ಸೆ ಮತ್ತು ಪ್ರಿಸ್ಕ್ರಿಪ್ಷನ್ ವಿವರಗಳು"
 }
+
 
